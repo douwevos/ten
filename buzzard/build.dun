@@ -1,0 +1,42 @@
+module {
+
+	name 'buzzard';
+	
+	dependencies {
+		module 'uchardet';
+		module 'gtk3';
+		module 'antelope';
+		module 'worm';
+	}
+
+	clear {
+		remove '[%=module.builddir%]';
+	}
+
+	compile {
+		cc {
+			natpad.cc.args {}
+			src { path './src/'; }  
+			destdir './compiled/'; 
+			depdir './deps/'; 
+		}
+		
+	}
+
+	package {
+		ar { srcdir './compiled/'; destfile './libbuzzard.a'; }
+	}	
+
+
+	export {
+		lib {
+			path '.';
+			libname 'buzzard';
+		}
+		headers {
+			dir './src/';
+		}
+	}
+
+
+}

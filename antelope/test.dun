@@ -1,0 +1,49 @@
+module {
+
+	name 'antelope.test';	
+	
+	
+	dependencies {
+		module 'antelope';
+	}
+
+	compile {
+		cc { 
+			src { path './src-ut/'; }
+			natpad.cc.args {}
+		
+			arg '-lm';
+			destdir './compiled-ut/'; 
+			depdir 'deps-ut';
+		}
+	}
+
+	package {
+		clink {
+			src { 
+				path './compiled-ut/';
+			}
+			output './antelope-ut';
+			natpad.cc.args {}
+			test {
+				arg '-lm';
+			}
+		}
+	}	
+
+
+	export {
+		lib {
+			path '.';
+			libname 'antelope';
+			libname 'm';
+			libname 'bfd';
+		}
+	
+		headers {
+			dir './src/';
+		}
+	}
+
+
+}

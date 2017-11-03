@@ -1,0 +1,44 @@
+module {
+
+	name 'buzzard.test';
+	
+	dependencies {
+		module 'buzzard';
+	}
+
+	clear {
+		remove '[%=module.builddir%]';
+	}
+
+	compile {
+		cc {
+			natpad.cc.args {}
+			src { path './src-ut/'; }  
+			destdir './compiled-ut/'; 
+			depdir './deps-ut/'; 
+		}
+		
+	}
+
+	package {
+		clink {
+			src { 
+				path './compiled-ut/';
+			}
+			output './buzzard-ut';
+			natpad.cc.args {}
+			test {
+				arg '-lm';
+			}
+		}
+	}	
+
+
+	export {
+		headers {
+			dir './src/';
+		}
+	}
+
+
+}
