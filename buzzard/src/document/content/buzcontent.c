@@ -21,6 +21,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "buzcontent.h"
+#include "buzmaterializedpage.h"
 #include <aaltobjectprivate.h>
 
 #define A_LOG_LEVEL A_LOG_WARN
@@ -30,6 +31,8 @@
 struct _AContext {
 	AAltObjectContext parent;
 	AArrayShady *pages;
+	BuzEnrichmentData *volatile enrichment_data;
+	int enriched_count;
 };
 
 struct _AEditContext {
@@ -80,9 +83,11 @@ BuzContent *buz_content_new() {
 	a_alt_object_construct((AAltObject *) result, TRUE);
 	AContext *context = (AContext *) a_alt_object_private(result)->context;
 	context->pages = a_array_new();
-	BuzPage *page = buz_page_new();
+	BuzMaterializedPage *page = buz_materialized_page_new();
 	a_array_add((AArray *) context->pages, page);
 	a_unref(page);
+	context->enrichment_data = NULL;
+	context->enriched_count = 0;
 	return result;
 }
 
@@ -124,13 +129,16 @@ void buz_content_set_page_at(BuzContent *content, BuzPageShady *page, int page_i
 }
 
 
-BuzPage *buz_context_editable_page_at(BuzContent *content, int page_index) {
+BuzMaterializedPage *buz_content_editable_page_at(BuzContent *content, int page_index) {
 	AContext *context = (AContext *) a_alt_object_private(content)->context;
 	BuzPageShady *in_list = (BuzPageShady *) a_array_at(context->pages, page_index);
-	if (a_alt_object_is_mutable(in_list)) {
-		return (BuzPage *) in_list;
+	if (BUZ_IS_MATERIALIZED_PAGE(in_list) && a_alt_object_is_mutable(in_list)) {
+		return (BuzMaterializedPage *) in_list;
 	}
-	BuzPage *result = buz_page_mutable(in_list);
+	if (!BUZ_IS_MATERIALIZED_PAGE(in_list)) {
+		// TODO
+	}
+	BuzMaterializedPage *result = buz_materialized_page_mutable((BuzMaterializedPageShady *) in_list);
 	a_array_set_at((AArray *) context->pages, result, page_index);
 	a_unref(result);
 	return result;
@@ -142,8 +150,8 @@ void buz_content_insert(BuzContent *content, AStringShady *txt, BuzCursorShady *
 	BuzRowLocation row_location = buz_content_page_at_row(content, row);
 	a_log_debug("insert text:%O at cursor:%O, page_idx=%d", txt, cursor, row_location.page_index);
 	if (row_location.page_index>=0) {
-		BuzPage *page = buz_context_editable_page_at(content, row_location.page_index);
-		BuzRow *row = buz_page_editable_row_at(page, row_location.page_row_index);
+		BuzMaterializedPage *page = buz_content_editable_page_at(content, row_location.page_index);
+		BuzRow *row = buz_materialized_page_editable_row_at(page, row_location.page_row_index);
 		a_log_debug("page=%O, row:%O", page, row);
 //		int column = buz_cursor_get_column(cursor);
 		AString *text = buz_row_editable_text(row);
@@ -153,12 +161,57 @@ void buz_content_insert(BuzContent *content, AStringShady *txt, BuzCursorShady *
 	}
 }
 
+void buz_content_enrichment_remap(BuzContent *content, BuzEnrichmentDataMapAnchored *old_map, BuzEnrichmentDataMapAnchored *new_map, BuzEnrichmentAction action, int index) {
+	AContext *context = (AContext *) a_alt_object_private(content)->context;
+	if (context->enrichment_data) {
+		buz_enrichment_data_remap(context->enrichment_data, old_map, new_map, action, index);
+		if (context->pages) {
+			AIterator *iter = a_array_iterator(context->pages);
+			BuzPageShady *page = NULL;
+			while(a_iterator_next(iter, (gconstpointer *) (&page))) {
+				buz_page_enrichment_remap(page, old_map, new_map, action, index);
+			}
+			a_unref(iter);
+		}
+	}
+}
+
+void buz_content_enrich(BuzContentAnchored *content, BuzEnrichmentDataMapAnchored *enrichment_map) {
+	AContext *context = (AContext *) a_alt_object_private(content)->context;
+	if (context->enriched_count==0) {
+		context->enrichment_data = buz_enrichment_data_new(enrichment_map);
+		AIterator *iter = a_array_iterator(context->pages);
+		BuzPageShady *page = NULL;
+		while(a_iterator_next(iter, (gconstpointer *) (&page))) {
+			buz_page_enrich(page, enrichment_map);
+		}
+		a_unref(iter);
+	}
+	context->enriched_count++;
+}
+
+void buz_content_impoverish(BuzContentAnchored *content) {
+	AContext *context = (AContext *) a_alt_object_private(content)->context;
+	if (context->enriched_count==0) {
+		a_deref(context->enrichment_data);
+		AIterator *iter = a_array_iterator(context->pages);
+		BuzPageShady *page = NULL;
+		while(a_iterator_next(iter, (gconstpointer *) (&page))) {
+			buz_page_impoverish(page);
+		}
+		a_unref(iter);
+	}
+	context->enriched_count--;
+}
+
 A_ALT_C(BuzContent, buz_content);
 
 static void l_a_clone(const AAltObjectContext *context_from, AAltObjectContext *context_to) {
 	const AContext *from = (const AContext *) context_from;
 	AContext *to = (AContext *) context_to;
 	to->pages = a_mutable_ref(from->pages);
+	to->enriched_count = 0;
+	to->enrichment_data = a_ref(from->enrichment_data);
 }
 
 static void l_a_anchor_content(AAltObject *object) {

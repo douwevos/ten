@@ -31,6 +31,8 @@ struct _AContext {
 	AAltObjectContext parent;
 	BuzContentShady *content;
 	AArrayShady *cursors;
+	BuzEnrichmentData *enrichment_data;
+	int enriched_count;
 };
 
 struct _AEditContext {
@@ -124,6 +126,37 @@ AIterator *buz_revision_page_iterator(BuzRevisionShady *revision) {
 	return buz_content_page_iterator(context->content);
 }
 
+
+void buz_revision_enrichment_remap(BuzRevisionAnchored *revision, BuzEnrichmentDataMapAnchored *old_map, BuzEnrichmentDataMapAnchored *new_map, BuzEnrichmentAction action, int index) {
+	AContext *context = (AContext *) a_alt_object_private(revision)->context;
+	BuzEnrichmentData *enrichment_data = context->enrichment_data;
+	a_log_debug("remap:enrichment_data=%p", enrichment_data);
+	if (enrichment_data) {
+		buz_enrichment_data_remap(enrichment_data, old_map, new_map, action, index);
+	}
+	buz_content_enrichment_remap(context->content, old_map, new_map, action, index);
+}
+
+void buz_revision_enrich(BuzRevisionAnchored *revision, BuzEnrichmentDataMapAnchored *enrichment_map) {
+	AContext *context = (AContext *) a_alt_object_private(revision)->context;
+	if (context->enriched_count==0) {
+		if (context->enrichment_data==NULL) {
+			context->enrichment_data = buz_enrichment_data_new(enrichment_map);
+		}
+		buz_content_enrich(context->content, enrichment_map);
+	}
+	context->enriched_count++;
+}
+
+void buz_revision_impoverish(BuzRevisionAnchored *revision) {
+	AContext *context = (AContext *) a_alt_object_private(revision)->context;
+	if (context->enriched_count==1) {
+		buz_content_impoverish(context->content);
+		a_deref(context->enrichment_data);
+	}
+	context->enriched_count--;
+}
+
 A_ALT_C(BuzRevision, buz_revision)
 
 static void l_a_clone(const AAltObjectContext *context_from, AAltObjectContext *context_to) {
@@ -131,6 +164,8 @@ static void l_a_clone(const AAltObjectContext *context_from, AAltObjectContext *
 	AContext *to = (AContext *) context_to;
 	to->content = a_mutable_ref(from->content);
 	to->cursors = a_mutable_ref(from->cursors);
+	to->enriched_count = 0;
+	to->enrichment_data = a_ref(from->enrichment_data);
 }
 
 static void l_a_anchor_content(AAltObject *object) {

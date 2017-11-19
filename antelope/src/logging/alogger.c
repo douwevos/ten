@@ -24,16 +24,23 @@
 #include <stdio.h>
 #include "../astring.h"
 #include "../aref.h"
+#include "../adate.h"
+
+static int64_t a_log_start_time;
 
 __thread gboolean cat_log_block = FALSE;
 
 void a_logger_print(const char *level, const char *file_or_class, int line_nr, const char *text, ...) {
 	AString *buf = a_string_new();
-	a_string_format(buf, "%s %s(%d): ", level, file_or_class, line_nr);
-//	printf("%s %s(%d): ", level, file_or_class, line_nr);
+
+	if (a_log_start_time==0) {
+		a_log_start_time = a_timestamp();
+	}
+	gint64 diftime = a_timestamp() - a_log_start_time;
+
+	a_string_format(buf, "%ld %s %s(%d): ", diftime, level, file_or_class, line_nr);
 	va_list args;
 	va_start(args, text);
-//	vprintf(text, args);
 	a_string_vformat(buf, text, args);
 	va_end(args);
 	printf("%s", a_string_chars(buf));

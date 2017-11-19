@@ -3,10 +3,9 @@ module {
 	name 'buzzard';
 	
 	dependencies {
-		module 'uchardet';
 		module 'gtk3';
 		module 'antelope';
-		module 'worm';
+#		module 'worm';
 	}
 
 	clear {
@@ -15,7 +14,7 @@ module {
 
 	compile {
 		cc {
-			natpad.cc.args {}
+			global.cc.args {}
 			src { path './src/'; }  
 			destdir './compiled/'; 
 			depdir './deps/'; 

@@ -56,6 +56,8 @@ BuzLayoutContext *buz_layout_context_new(PangoContext *context);
 
 PangoContext *buz_layout_context_get_pango_context(BuzLayoutContext *context);
 
+int buz_layout_context_get_height(BuzLayoutContext *context);
+
 
 G_END_DECLS
 

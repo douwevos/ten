@@ -12,7 +12,7 @@ module {
 
 	compile {
 		cc {
-			natpad.cc.args {}
+			global.cc.args {}
 			src { path './src-ut/'; }  
 			destdir './compiled-ut/'; 
 			depdir './deps-ut/'; 
@@ -26,7 +26,7 @@ module {
 				path './compiled-ut/';
 			}
 			output './buzzard-ut';
-			natpad.cc.args {}
+			global.cc.args {}
 			test {
 				arg '-lm';
 			}

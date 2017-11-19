@@ -62,6 +62,11 @@ void buz_revision_set_page_at(BuzRevision *revision, BuzPageShady *page, int pag
 
 AIterator *buz_revision_page_iterator(BuzRevisionShady *revision);
 
+void buz_revision_enrichment_remap(BuzRevisionAnchored *revision, BuzEnrichmentDataMapAnchored *old_map, BuzEnrichmentDataMapAnchored *new_anchored, BuzEnrichmentAction action, int index);
+
+void buz_revision_enrich(BuzRevisionAnchored *revision, BuzEnrichmentDataMapAnchored *enrichment_map);
+void buz_revision_impoverish(BuzRevisionAnchored *revision);
+
 A_ALT_HEADERS(BuzRevision, buz_revision);
 
 G_END_DECLS

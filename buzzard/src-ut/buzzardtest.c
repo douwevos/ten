@@ -48,7 +48,7 @@ static void my_g_log_default_handler(const gchar *log_domain, GLogLevelFlags log
 
 int main(int argc, char **argv) {
 
-	a_monitor_set_for_type_name("AString");
+//	a_monitor_set_for_type_name("AString");
 
 	g_log_set_handler("GLib-GObject", G_LOG_LEVEL_CRITICAL, (GLogFunc) my_g_log_default_handler, NULL);
 	g_log_set_handler("GLib-GObject", G_LOG_LEVEL_WARNING, (GLogFunc) my_g_log_default_handler, NULL);

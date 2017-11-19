@@ -65,6 +65,11 @@ void buz_document_post_revision(BuzDocument *document, BuzRevisionShady *c_revis
 void buz_document_add_listener(BuzDocument *document, BuzDocumentListener *listener);
 void buz_document_remove_listener(BuzDocument *document, BuzDocumentListener *listener);
 
+void buz_document_post_enrichment_slot_notify(BuzDocument *document, BuzRevision *a_revision, AStringAnchored *slot_key, gpointer user_data);
+int buz_document_register_enrichment_slot(BuzDocument *document, AStringAnchored *slot_key);
+void buz_document_unregister_enrichment_slot(BuzDocument *document, AStringAnchored *slot_key);
+
+
 G_END_DECLS
 
 #endif /* DOCUMENT_BUZDOCUMENT_H_ */

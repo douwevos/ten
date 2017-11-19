@@ -71,6 +71,11 @@ void buz_content_set_page_at(BuzContent *content, BuzPageShady *page, int page_i
 
 void buz_content_insert(BuzContent *content, AStringShady *txt, BuzCursorShady *cursor);
 
+void buz_content_enrichment_remap(BuzContent *content, BuzEnrichmentDataMapAnchored *old_map, BuzEnrichmentDataMapAnchored *new_map, BuzEnrichmentAction action, int index);
+
+void buz_content_enrich(BuzContentAnchored *content, BuzEnrichmentDataMapAnchored *enrichment_map);
+void buz_content_impoverish(BuzContentAnchored *content);
+
 A_ALT_HEADERS(BuzContent, buz_content);
 
 G_END_DECLS
