@@ -22,7 +22,7 @@
 
 #include "buzpagescanner.h"
 
-#define A_LOG_LEVEL A_LOG_WARN
+#define A_LOG_LEVEL A_LOG_ALL
 #define A_LOG_CLASS "BuzPageScanner"
 #include <asupport.h>
 
@@ -72,7 +72,7 @@ BuzPageScanner *buz_page_scanner_new(char *contents, gsize contents_length) {
 }
 
 
-BuzPage *buz_page_scanner_scan(BuzPageScanner *page_scanner) {
+BuzMaterializedPage *buz_page_scanner_scan(BuzPageScanner *page_scanner) {
 	BuzPageScannerPrivate *priv = buz_page_scanner_get_instance_private(page_scanner);
 	AArray *row_list = a_array_new();
 
@@ -83,11 +83,12 @@ BuzPage *buz_page_scanner_scan(BuzPageScanner *page_scanner) {
 	char *off_last = text;
 	gboolean keep_running = TRUE;
 
+	a_log_debug("start scanning");
 	char *off = text;
 	while(keep_running && off<end) {
-		if (a_array_size(row_list)>3) {
-			break;
-		}
+//		if (a_array_size(row_list)>3) {
+//			break;
+//		}
 
 		char ch = *off;
 		if (ch==0xa) {
@@ -104,7 +105,7 @@ BuzPage *buz_page_scanner_scan(BuzPageScanner *page_scanner) {
 			BuzRow *row = buz_row_new();
 			AString *rowtext = buz_row_editable_text(row);
 			a_string_append_chars_len(rowtext, off_last, (int) (off-off_last));
-			a_log_debug("created rowtext=%o, length=%d", rowtext, (int) (off-off_last));
+//			a_log_debug("created rowtext=%o, length=%d", rowtext, (int) (off-off_last));
 			a_array_add(row_list, row);
 			a_unref(row);
 //			keep_running = cha_scanned_line(off_last, off, le, data);
@@ -124,7 +125,7 @@ BuzPage *buz_page_scanner_scan(BuzPageScanner *page_scanner) {
 			BuzRow *row = buz_row_new();
 			AString *rowtext = buz_row_editable_text(row);
 			a_string_append_chars_len(rowtext, off_last, (int) (off-off_last));
-			a_log_debug("created rowtext=%o, length=%d", rowtext, (int) (off-off_last));
+//			a_log_debug("created rowtext=%o, length=%d", rowtext, (int) (off-off_last));
 			a_array_add(row_list, row);
 			a_unref(row);
 //			keep_running = cha_scanned_line(off_last, off, le, data);
@@ -139,8 +140,10 @@ BuzPage *buz_page_scanner_scan(BuzPageScanner *page_scanner) {
 //		cha_scanned_line(off_last, end, CHA_LINE_END_NONE, data);
 //	}
 
-	BuzPage *result = buz_page_new();
-	buz_page_set_rows(result, row_list);
+	a_log_debug("end scanning");
+
+	BuzMaterializedPage *result = buz_materialized_page_new();
+	buz_materialized_page_set_rows(result, row_list);
 	a_log_debug("row_list_size=%d", a_array_size(row_list));
 	a_unref(row_list);
 

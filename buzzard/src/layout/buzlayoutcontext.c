@@ -27,7 +27,8 @@
 #include <asupport.h>
 
 struct _BuzLayoutContextPrivate {
-	PangoContext *context;
+	PangoContext *pango_context;
+	int font_height;
 };
 
 G_DEFINE_TYPE_WITH_CODE(BuzLayoutContext, buz_layout_context, A_TYPE_OBJECT,
@@ -50,7 +51,7 @@ static void l_dispose(GObject *object) {
 	a_log_detail("dispose:%p", object);
 	BuzLayoutContext *instance = BUZ_LAYOUT_CONTEXT(object);
 	BuzLayoutContextPrivate *priv = buz_layout_context_get_instance_private(instance);
-	a_unref(priv->context);
+	a_unref(priv->pango_context);
 	G_OBJECT_CLASS(buz_layout_context_parent_class)->dispose(object);
 	a_log_detail("disposed:%p", object);
 }
@@ -62,15 +63,28 @@ static void l_finalize(GObject *object) {
 }
 
 
-BuzLayoutContext *buz_layout_context_new(PangoContext *context) {
+BuzLayoutContext *buz_layout_context_new(PangoContext *pango_context) {
 	BuzLayoutContext *result = g_object_new(BUZ_TYPE_LAYOUT_CONTEXT, NULL);
 	a_object_construct((AObject *) result);
 	BuzLayoutContextPrivate *priv = buz_layout_context_get_instance_private(result);
-	priv->context = a_ref(context);
+	priv->pango_context = a_ref(pango_context);
+
+	PangoLayout *layout = pango_layout_new(pango_context);
+	pango_layout_set_text(layout, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", 50);
+	PangoRectangle inkt_rect;
+	pango_layout_get_pixel_extents(layout, &inkt_rect, NULL);
+	priv->font_height = ((inkt_rect.height+PANGO_SCALE-1)/PANGO_SCALE);
+
 	return result;
 }
 
 PangoContext *buz_layout_context_get_pango_context(BuzLayoutContext *context) {
 	BuzLayoutContextPrivate *priv = buz_layout_context_get_instance_private(context);
-	return priv->context;
+	return priv->pango_context;
+}
+
+
+int buz_layout_context_get_height(BuzLayoutContext *context) {
+	BuzLayoutContextPrivate *priv = buz_layout_context_get_instance_private(context);
+	return priv->font_height;
 }

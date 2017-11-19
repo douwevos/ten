@@ -17,7 +17,7 @@ module {
 	compile {
 		cc { 
 			src { path './src/'; }
-			natpad.cc.args {}
+			global.cc.args {}
 				arg '-O0';
 			arg '-ggdb';
 			arg '-Wall';

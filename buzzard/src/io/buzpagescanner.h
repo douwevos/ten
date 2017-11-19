@@ -23,7 +23,7 @@
 #ifndef IO_BUZPAGESCANNER_H_
 #define IO_BUZPAGESCANNER_H_
 
-#include "../document/content/buzpage.h"
+#include "../document/content/buzmaterializedpage.h"
 #include <antelope.h>
 
 G_BEGIN_DECLS
@@ -54,9 +54,7 @@ GType buz_page_scanner_get_type();
 
 BuzPageScanner *buz_page_scanner_new();
 
-
-BuzPage *buz_page_scanner_scan(BuzPageScanner *page_scanner);
-
+BuzMaterializedPage *buz_page_scanner_scan(BuzPageScanner *page_scanner);
 
 G_END_DECLS
 

@@ -22,6 +22,7 @@
 
 #include "buztextlayout.h"
 
+
 #define A_LOG_LEVEL A_LOG_WARN
 #define A_LOG_CLASS "BuzTextLayout"
 #include <asupport.h>
@@ -30,6 +31,8 @@ struct _BuzTextLayoutPrivate {
 	BuzLayoutContext *context;
 	AStringAnchored *text;
 	PangoLayout *pango_layout;
+
+	AArray *lines;
 };
 
 G_DEFINE_TYPE_WITH_CODE(BuzTextLayout, buz_text_layout, A_TYPE_OBJECT,
@@ -74,13 +77,31 @@ BuzTextLayout *buz_text_layout_new(BuzLayoutContext *context) {
 	priv->context = a_ref(context);
 	PangoContext *pango_context = buz_layout_context_get_pango_context(context);
 	priv->pango_layout = pango_layout_new(pango_context);
+	priv->lines = a_array_new();
 	return result;
+}
+
+
+BuzLayoutContext *buz_text_layout_get_layout_context(BuzTextLayout *layout) {
+	BuzTextLayoutPrivate *priv = buz_text_layout_get_instance_private(layout);
+	return priv->context;
 }
 
 void buz_text_layout_set_text(BuzTextLayout *layout, AStringShady *text) {
 	BuzTextLayoutPrivate *priv = buz_text_layout_get_instance_private(layout);
+	if (priv->text == text) {
+		return;
+	}
 	priv->text = a_string_anchor(a_ref(text));
 	pango_layout_set_text(priv->pango_layout, a_string_chars(priv->text), a_string_length(priv->text));
+	a_array_remove_all(priv->lines);
+	int line_count = pango_layout_get_line_count(priv->pango_layout);
+	int line_idx;
+	for(line_idx=0; line_idx<line_count; line_idx++) {
+		BuzTextLineLayout *line_layout = buz_text_line_layout_new(pango_layout_get_line_readonly(priv->pango_layout, line_idx));
+		a_array_add(priv->lines, line_layout);
+		a_unref(line_layout);
+	}
 }
 
 void buz_text_layout_show(BuzTextLayout *layout, cairo_t *cairo) {
@@ -94,4 +115,25 @@ double buz_text_layout_get_height(BuzTextLayout *layout) {
 	PangoRectangle inkt_rect;
 	pango_layout_get_extents(priv->pango_layout, NULL, &inkt_rect);
 	return (double) (inkt_rect.height)/PANGO_SCALE;
+}
+
+const BuzSize buz_text_layout_get_size(BuzTextLayout *layout) {
+	BuzTextLayoutPrivate *priv = buz_text_layout_get_instance_private(layout);
+	PangoRectangle inkt_rect;
+	pango_layout_get_extents(priv->pango_layout, NULL, &inkt_rect);
+	BuzSize result;
+	result.height = (inkt_rect.height+PANGO_SCALE-1)/PANGO_SCALE;
+	result.width = (inkt_rect.width+PANGO_SCALE-1)/PANGO_SCALE;
+	return result;
+}
+
+
+int buz_text_layout_line_count(BuzTextLayout *layout) {
+	BuzTextLayoutPrivate *priv = buz_text_layout_get_instance_private(layout);
+	return pango_layout_get_line_count(priv->pango_layout);
+}
+
+BuzTextLineLayout *buz_text_layout_line_at(BuzTextLayout *layout, int index) {
+	BuzTextLayoutPrivate *priv = buz_text_layout_get_instance_private(layout);
+	return (BuzTextLineLayout *) a_array_at(priv->lines, index);
 }

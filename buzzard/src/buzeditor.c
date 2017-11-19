@@ -393,7 +393,7 @@ static void l_widget_unrealize(GtkWidget *widget) {
 
 
 static void l_widget_size_allocate(GtkWidget *widget, GtkAllocation *allocation) {
-//	BuzEditorPrivate *priv = buz_editor_get_instance_private(BUZ_EDITOR(widget));
+	BuzEditorPrivate *priv = buz_editor_get_instance_private(BUZ_EDITOR(widget));
 
 	GtkAllocation cur_alloc;
 	gtk_widget_get_allocation(widget, &cur_alloc);
@@ -411,7 +411,7 @@ static void l_widget_size_allocate(GtkWidget *widget, GtkAllocation *allocation)
 		gdk_window_move_resize(gtk_widget_get_window(widget), allocation->x, allocation->y, allocation->width, allocation->height);
 	}
 
-//	cha_document_view_set_view_size(priv->document_view, allocation->width, allocation->height);
+	buz_editor_view_set_view_size(priv->editor_view, allocation->width, allocation->height);
 
 	l_set_hadjustment_values((BuzEditor *) widget);
 	l_set_vadjustment_values((BuzEditor *) widget);

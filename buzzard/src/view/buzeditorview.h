@@ -57,7 +57,10 @@ BuzEditorView *buz_editor_view_new(BuzDocument *document, GtkWidget *widget);
 
 gboolean buz_editor_view_key_pressed(BuzEditorView *editor_view, GdkEventKey *event);
 
+void buz_editor_view_set_view_size(BuzEditorView *editor_view, int width, int height);
+
 void buz_editor_view_draw(BuzEditorView *editor_view, cairo_t *cr);
+
 
 
 G_END_DECLS

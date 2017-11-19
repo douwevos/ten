@@ -23,6 +23,7 @@
 #ifndef DOCUMENT_BUZDOCUMENTLISTENER_H_
 #define DOCUMENT_BUZDOCUMENTLISTENER_H_
 
+#include "buzenrichmentdatamap.h"
 #include "content/buzrevision.h"
 #include <glib-object.h>
 
@@ -38,6 +39,8 @@ typedef struct _BuzDocumentListenerInterface      BuzDocumentListenerInterface;
 struct _BuzDocumentListenerInterface {
   GTypeInterface parent_iface;
   void (*newRevision) (BuzDocumentListener *self, BuzRevisionAnchored *revision);
+  void (*onEnrichmentSlotNotify)(BuzDocumentListener *self, BuzRevision *a_revision, AStringAnchored *slot_key, gpointer user_data);
+  void (*onSlotRegistered) (BuzDocumentListener *self, BuzRevisionAnchored *rev, BuzEnrichmentDataMap *enrichment_map, AStringAnchored *slot_key, int index);
 };
 
 GType buz_document_listener_get_type(void);

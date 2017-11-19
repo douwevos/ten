@@ -23,6 +23,8 @@
 #ifndef DOCUMENT_BUZROW_H_
 #define DOCUMENT_BUZROW_H_
 
+#include "../buzenrichmentdata.h"
+#include "../buzenrichmentdatamap.h"
 #include <antelope.h>
 
 G_BEGIN_DECLS
@@ -57,6 +59,14 @@ BuzRow *buz_row_new();
 
 AStringShady *buz_row_text(BuzRowShady *row);
 AString *buz_row_editable_text(BuzRow *row);
+
+void buz_row_enrichment_remap(BuzRowShady *row, BuzEnrichmentDataMapAnchored *old_map, BuzEnrichmentDataMapAnchored *new_map, BuzEnrichmentAction action, int index);
+
+void buz_row_enrich(BuzRowAnchored *row, BuzEnrichmentDataMapAnchored *enrichment_map, ALock *lock);
+void buz_row_impoverish(BuzRowAnchored *row);
+
+GObject *buz_row_get_slot_content_ref(BuzRowAnchored *row, BuzEnrichmentSlot *slot);
+void buz_row_set_slot_content(BuzRowAnchored *row, BuzEnrichmentSlot *slot, GObject *content);
 
 BuzRowAnchored *buz_row_anchor(BuzRowShady *row);
 BuzRow *buz_row_mutable(BuzRowShady *row);

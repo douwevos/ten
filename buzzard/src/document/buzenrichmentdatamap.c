@@ -23,7 +23,7 @@
 #include "buzenrichmentdatamap.h"
 #include <aaltobjectprivate.h>
 
-#define A_LOG_LEVEL A_LOG_WARN
+#define A_LOG_LEVEL A_LOG_ALL
 #define A_LOG_CLASS "BuzEnrichmentDataMap"
 #include <asupport.h>
 
@@ -69,8 +69,9 @@ static void buz_enrichment_data_map_init(BuzEnrichmentDataMap *instance) {
 
 static void l_dispose(GObject *object) {
 	a_log_detail("dispose:%p", object);
-	AContext *context = (AContext *) a_alt_object_private(object)->context;
-	if (context) {
+	AAltObjectPrivate *priv = a_alt_object_private(object);
+	AContext *context = (AContext *) priv->context;
+	if (context!=NULL && (a_alt_object_editor_get_original_context(priv->editor)!=priv->context)) {
 		a_unref(context->keys);
 		a_unref(context->nullified_data);
 	}
@@ -80,10 +81,11 @@ static void l_dispose(GObject *object) {
 
 BuzEnrichmentDataMap *buz_enrichment_data_map_new() {
 	BuzEnrichmentDataMap *result = g_object_new(BUZ_TYPE_ENRICHMENT_DATA_MAP, NULL);
-	a_alt_object_construct((AAltObject *) result, TRUE);
+	a_alt_object_construct((AAltObject *) result, FALSE);
 	AContext *context = (AContext *) a_alt_object_private(result)->context;
 	context->keys = a_array_new();
 	context->nullified_data = a_array_new();
+	a_log_detail("new:%p", result);
 	return result;
 }
 

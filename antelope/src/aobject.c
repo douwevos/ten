@@ -55,14 +55,18 @@ static void l_dispose(GObject *object) {
 
 static void l_finalize(GObject *object) {
 //	a_log_detail("finalize:%p", object);
+#ifdef A_REFERENCES_MONITORED
 	a_monitor_ref_destroyed(object);
+#endif
 	G_OBJECT_CLASS(a_object_parent_class)->finalize(object);
 //	a_log_detail("finalized:%p", object);
 }
 
 
 void a_object_construct(AObject *object) {
+#ifdef A_REFERENCES_MONITORED
 	a_monitor_ref_created(object);
+#endif
 }
 
 

@@ -49,17 +49,27 @@ struct _BuzPage {
 
 struct _BuzPageClass {
 	AAltObjectClass parent_class;
+	int (*rowCount)(BuzPageShady *page);
+	void (*enrichmentRemap)(BuzPageShady *page, BuzEnrichmentDataMapAnchored *old_map, BuzEnrichmentDataMapAnchored *new_map, BuzEnrichmentAction action, int index);
+	void (*enrich)(BuzPageAnchored *page, BuzEnrichmentDataMapAnchored *enrichment_map);
+	void (*impoverish)(BuzPageAnchored *page);
 };
 
 
 GType buz_page_get_type();
 
-BuzPage *buz_page_new();
+void buz_page_construct(BuzPage *page);
 
 int buz_page_row_count(BuzPageShady *page);
-BuzRowShady *buz_page_row_at(BuzPageShady *page, int row);
-BuzRow *buz_page_editable_row_at(BuzPage *page, int row);
-void buz_page_set_rows(BuzPage *page, AArray *row_list);
+
+void buz_page_enrichment_remap(BuzPageShady *page, BuzEnrichmentDataMapAnchored *old_map, BuzEnrichmentDataMapAnchored *new_map, BuzEnrichmentAction action, int index);
+
+void buz_page_enrich(BuzPageAnchored *page, BuzEnrichmentDataMapAnchored *enrichment_map);
+void buz_page_impoverish(BuzPageAnchored *page);
+
+GObject *buz_page_get_slot_content_ref(BuzPageAnchored *page, BuzEnrichmentSlot *slot);
+void buz_page_set_slot_content(BuzPageAnchored *page, BuzEnrichmentSlot *slot, GObject *content);
+
 
 A_ALT_HEADERS(BuzPage, buz_page);
 

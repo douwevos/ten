@@ -25,6 +25,7 @@
 #include "../layout/buzlayoutcontext.h"
 #include "../layout/buztextlayout.h"
 #include "../document/content/buzrevision.h"
+#include "../document/content/buzmaterializedpage.h"
 #include "../document/buzdocumentlistener.h"
 
 #define A_LOG_LEVEL A_LOG_WARN
@@ -79,7 +80,16 @@ BuzEditorView *buz_editor_view_new(BuzDocument *document, GtkWidget *widget) {
 	a_object_construct((AObject *) result);
 	priv->document = a_ref(document);
 	priv->widget = widget;
-	priv->view = NULL;
+	priv->view = buz_view_new(document);
+
+	PangoContext *pango_context = gtk_widget_create_pango_context(priv->widget);
+	PangoFontDescription *font_descr = pango_font_description_from_string("Ubuntu Mono 13");
+	pango_context_set_font_description(pango_context, font_descr);
+	pango_context_changed(pango_context);
+	BuzLayoutContext *layout_context = buz_layout_context_new(pango_context);
+	buz_view_set_layout_context(priv->view, layout_context);
+
+
 	buz_document_add_listener(document, BUZ_DOCUMENT_LISTENER(result));
 	return result;
 }
@@ -99,48 +109,83 @@ gboolean buz_editor_view_key_pressed(BuzEditorView *editor_view, GdkEventKey *ev
 	return FALSE;
 }
 
+void buz_editor_view_set_view_size(BuzEditorView *editor_view, int width, int height) {
+	BuzEditorViewPrivate *priv = buz_editor_view_get_instance_private(editor_view);
+	buz_view_set_view_size(priv->view, width, height);
+}
+
+
 void buz_editor_view_draw(BuzEditorView *editor_view, cairo_t *cr) {
 	BuzEditorViewPrivate *priv = buz_editor_view_get_instance_private(editor_view);
-	BuzRevisionAnchored *revision = buz_document_get_revision_ref(priv->document);
-	AIterator *page_iter = buz_revision_page_iterator(revision);
-	a_unref(revision);
-	BuzPageShady *page = NULL;
 
-	PangoContext *pango_context = gtk_widget_create_pango_context(priv->widget);
-//	pango_context_new();
-	PangoFontDescription *font_descr = pango_font_description_from_string("Ubuntu Mono 13");
-	pango_context_set_font_description(pango_context, font_descr);
-//	PangoFont *font = pango_context_load_font(pango_context, font_descr);
-	pango_context_changed(pango_context);
+	const BuzViewDimensions view_dimensions = buz_view_get_dimensions(priv->view);
+	long long top = view_dimensions.top;
 
-//	PangoContext *pango_context = gtk_widget_get_pango_context(priv->widget);
-	BuzLayoutContext *layout_context = buz_layout_context_new(pango_context);
-	a_log_debug("do_draw:revision=%o", revision);
+	buz_view_update_lines(priv->view);
+	long long first_line_y_view = 0;
+	AArray *lines = buz_view_get_lines(priv->view, &first_line_y_view);
 
-	double view_y = 0;
-	while(a_iterator_next(page_iter, (gconstpointer *) &page)) {
-		int page_row_count = buz_page_row_count(page);
-		int page_row_idx;
-		a_log_debug("page=%o, row_count=%d", page, page_row_count);
-		for(page_row_idx=0; page_row_idx<page_row_count; page_row_idx++) {
-			BuzRowShady *buzrow = buz_page_row_at(page, page_row_idx);
-//			a_log_debug("buzrow=%o", buzrow);
-			AStringShady *text = buz_row_text(buzrow);
-			BuzTextLayout *text_layout = buz_text_layout_new(layout_context);
-			buz_text_layout_set_text(text_layout, text);
-//			PangoLayout  *pango_layout = gtk_widget_create_pango_layout(priv->widget, a_string_chars(text));
+	if (lines) {
+		long long view_y = top-first_line_y_view;
+		AIterator *lines_iter = a_array_iterator(lines);
+		BuzTextLineLayout *line = NULL;
+		while(a_iterator_next(lines_iter, &line)) {
 			cairo_move_to(cr, 0, view_y);
-//			PangoRectangle inkt_rect;
-//			pango_layout_get_pixel_extents(pango_layout, &inkt_rect, NULL);
-			buz_text_layout_show(text_layout, cr);
-//			pango_cairo_show_layout(cr, pango_layout);
-//			a_unref(pango_layout);
-			view_y += buz_text_layout_get_height(text_layout);
-			a_unref(text_layout);
+			int height = buz_text_line_layout_show(line, cr);
+			a_log_error("height=%d, y=%ld", height, view_y)
+			view_y += height;
 		}
+		a_unref(lines);
 	}
-	a_unref(page_iter);
-	a_unref(layout_context);
+
+
+//	buz_view_line_at
+
+//
+//
+//	BuzRevisionAnchored *revision = buz_document_get_revision_ref(priv->document);
+//	AIterator *page_iter = buz_revision_page_iterator(revision);
+//	a_unref(revision);
+//	BuzPageShady *page = NULL;
+//
+//	PangoContext *pango_context = gtk_widget_create_pango_context(priv->widget);
+////	pango_context_new();
+//	PangoFontDescription *font_descr = pango_font_description_from_string("Ubuntu Mono 13");
+//	pango_context_set_font_description(pango_context, font_descr);
+////	PangoFont *font = pango_context_load_font(pango_context, font_descr);
+//	pango_context_changed(pango_context);
+//
+////	PangoContext *pango_context = gtk_widget_get_pango_context(priv->widget);
+//	BuzLayoutContext *layout_context = buz_layout_context_new(pango_context);
+//	a_log_debug("do_draw:revision=%o", revision);
+//
+//	double view_y = 0;
+//	while(a_iterator_next(page_iter, (gconstpointer *) &page)) {
+//		if (BUZ_IS_MATERIALIZED_PAGE(page)) {
+//			BuzMaterializedPageShady *mat_page = (BuzMaterializedPageShady *) page;
+//			int page_row_count = buz_page_row_count(page);
+//			int page_row_idx;
+//			a_log_debug("page=%o, row_count=%d", page, page_row_count);
+//			for(page_row_idx=0; page_row_idx<page_row_count; page_row_idx++) {
+//				BuzRowShady *buzrow = buz_materialized_page_row_at(mat_page, page_row_idx);
+//	//			a_log_debug("buzrow=%o", buzrow);
+//				AStringShady *text = buz_row_text(buzrow);
+//				BuzTextLayout *text_layout = buz_text_layout_new(layout_context);
+//				buz_text_layout_set_text(text_layout, text);
+//	//			PangoLayout  *pango_layout = gtk_widget_create_pango_layout(priv->widget, a_string_chars(text));
+//				cairo_move_to(cr, 250, view_y);
+//	//			PangoRectangle inkt_rect;
+//	//			pango_layout_get_pixel_extents(pango_layout, &inkt_rect, NULL);
+//				buz_text_layout_show(text_layout, cr);
+//	//			pango_cairo_show_layout(cr, pango_layout);
+//	//			a_unref(pango_layout);
+//				view_y += buz_text_layout_get_height(text_layout);
+//				a_unref(text_layout);
+//			}
+//		}
+//	}
+//	a_unref(page_iter);
+//	a_unref(layout_context);
 }
 
 static void l_document_new_revision(BuzDocumentListener *listener, BuzRevisionAnchored *revision) {

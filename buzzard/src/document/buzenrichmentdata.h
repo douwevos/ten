@@ -35,6 +35,12 @@ G_BEGIN_DECLS
 #define BUZ_IS_ENRICHMENT_DATA_CLASS(klass)   (G_TYPE_CHECK_CLASS_TYPE ((klass), BUZ_TYPE_ENRICHMENT_DATA))
 #define BUZ_ENRICHMENT_DATA_GET_CLASS(obj)    (G_TYPE_INSTANCE_GET_CLASS ((obj), BUZ_TYPE_ENRICHMENT_DATA, BuzEnrichmentDataClass))
 
+typedef enum _BuzEnrichmentAction BuzEnrichmentAction;
+
+enum _BuzEnrichmentAction {
+	BUZ_ENRICHMENT_ADD,
+	BUZ_ENRICHMENT_REMOVE
+};
 
 typedef struct _BuzEnrichmentData               BuzEnrichmentData;
 typedef struct _BuzEnrichmentDataPrivate        BuzEnrichmentDataPrivate;
@@ -49,6 +55,12 @@ struct _BuzEnrichmentDataClass {
 	AObjectClass parent_class;
 };
 
+typedef struct _BuzEnrichmentSlot BuzEnrichmentSlot;
+
+struct _BuzEnrichmentSlot {
+	AStringAnchored *slot_key;
+	int slot_index;
+};
 
 GType buz_enrichment_data_get_type();
 
@@ -57,12 +69,12 @@ BuzEnrichmentData *buz_enrichment_data_new_lock(BuzEnrichmentDataMapAnchored *a_
 
 ALock *buz_enrichment_data_get_lock(BuzEnrichmentData *enrichment_data);
 
-void buz_enrichment_data_remap(BuzEnrichmentData *enrichment_data, BuzEnrichmentDataMapAnchored *a_old_map, BuzEnrichmentDataMap *a_new_map, int add_idx, int rem_idx);
+void buz_enrichment_data_remap(BuzEnrichmentData *enrichment_data, BuzEnrichmentDataMapAnchored *old_map, BuzEnrichmentDataMapAnchored *new_map, BuzEnrichmentAction action, int index);
 
 BuzEnrichmentDataMapAnchored *buz_enrichment_data_get_map(const BuzEnrichmentData *enrichment_data);
 
-GObject *buz_enrichment_data_get_slot_content_ref(const BuzEnrichmentData *enrichment_data, int slot_index, AStringAnchored *slot_key);
-void buz_enrichment_data_set_slot_content(const BuzEnrichmentData *enrichment_data, int slot_index, AStringAnchored *slot_key, GObject *content);
+GObject *buz_enrichment_data_get_slot_content_ref(const BuzEnrichmentData *enrichment_data, BuzEnrichmentSlot *slot);
+void buz_enrichment_data_set_slot_content(const BuzEnrichmentData *enrichment_data, BuzEnrichmentSlot *slot, GObject *content);
 
 G_END_DECLS
 

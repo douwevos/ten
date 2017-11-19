@@ -29,11 +29,16 @@
 #ifndef A_REFERENCES_MONITOR
 
 gpointer a_ref(gconstpointer ptr) {
+	if (ptr==NULL) {
+		return NULL;
+	}
 	return g_object_ref(ptr);
 }
 
 void a_unref(gconstpointer ptr) {
-	g_object_unref(ptr);
+	if (ptr) {
+		g_object_unref(ptr);
+	}
 }
 
 void a_swap_ref_intern(gconstpointer *field, gconstpointer value) {
@@ -41,8 +46,10 @@ void a_swap_ref_intern(gconstpointer *field, gconstpointer value) {
 	if (old == value) {
 		return;
 	}
-	*field = g_object_ref(value);
-	g_object_unref(old);
+	*field = value==NULL ? NULL : g_object_ref(value);
+	if (old) {
+		g_object_unref(old);
+	}
 }
 
 #endif

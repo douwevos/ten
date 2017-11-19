@@ -24,6 +24,7 @@
 #define VIEW_BUZVIEW_H_
 
 #include "../document/buzdocument.h"
+#include "../layout/buzlayoutcontext.h"
 #include "../document/content/buzrevision.h"
 #include <antelope.h>
 
@@ -50,12 +51,29 @@ struct _BuzViewClass {
 	AObjectClass parent_class;
 };
 
+typedef struct _BuzViewDimensions BuzViewDimensions;
+
+struct _BuzViewDimensions {
+	long long top;
+	int height;
+	int left, width;
+};
 
 GType buz_view_get_type();
 
 void buz_view_construct(BuzView *view, BuzDocument *document);
 
 BuzView *buz_view_new(BuzDocument *document);
+void buz_view_set_layout_context(BuzView *view, BuzLayoutContext *layout_context);
+
+void buz_view_set_view_size(BuzView *view, int width, int height);
+
+const BuzViewDimensions buz_view_get_dimensions(BuzView *view);
+
+void buz_view_update_lines(BuzView *view);
+
+AArray *buz_view_get_lines(BuzView *view, long long *first_line_y_view);
+
 
 G_END_DECLS
 

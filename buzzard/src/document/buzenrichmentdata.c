@@ -96,7 +96,7 @@ ALock *buz_enrichment_data_get_lock(BuzEnrichmentData *enrichment_data) {
 	return priv->lock;
 }
 
-void buz_enrichment_data_remap(BuzEnrichmentData *enrichment_data, BuzEnrichmentDataMapAnchored *old_map, BuzEnrichmentDataMap *new_map, int add_idx, int rem_idx) {
+void buz_enrichment_data_remap(BuzEnrichmentData *enrichment_data, BuzEnrichmentDataMapAnchored *old_map, BuzEnrichmentDataMapAnchored *new_map, BuzEnrichmentAction action, int index) {
 	BuzEnrichmentDataPrivate *priv = buz_enrichment_data_get_instance_private(enrichment_data);
 	// TODO old_map is not the current map... we need a manual synchronize here ... for now log a fatal msgs
 	a_lock_lock(priv->lock);
@@ -107,11 +107,10 @@ void buz_enrichment_data_remap(BuzEnrichmentData *enrichment_data, BuzEnrichment
 
 	a_swap_ref(priv->enrichment_map, new_map);
 	if (priv->data) {
-		if (add_idx>=0) {
-			a_array_add_at(priv->data, NULL, add_idx);
-		}
-		if (rem_idx>=0) {
-			a_array_remove(priv->data, rem_idx, NULL);
+		if (action==BUZ_ENRICHMENT_ADD) {
+			a_array_add_at(priv->data, NULL, index);
+		} else if (action==BUZ_ENRICHMENT_REMOVE) {
+			a_array_remove(priv->data, index, NULL);
 		}
 	}
 	a_lock_unlock(priv->lock);
@@ -125,16 +124,16 @@ BuzEnrichmentDataMapAnchored *buz_enrichment_data_get_map(const BuzEnrichmentDat
 	return result;
 }
 
-GObject *buz_enrichment_data_get_slot_content_ref(const BuzEnrichmentData *enrichment_data, int slot_index, AStringAnchored *slot_key) {
+GObject *buz_enrichment_data_get_slot_content_ref(const BuzEnrichmentData *enrichment_data, BuzEnrichmentSlot *slot) {
 	GObject *result = NULL;
 	const BuzEnrichmentDataPrivate *priv = buz_enrichment_data_get_instance_private((BuzEnrichmentData *) enrichment_data);
 	a_lock_lock(priv->lock);
 	if (priv->data) {
-		if (slot_key) {
-			slot_index = buz_enrichment_data_map_find_slot_index(priv->enrichment_map, slot_key, slot_index);
+		if (slot->slot_key) {
+			slot->slot_index = buz_enrichment_data_map_find_slot_index(priv->enrichment_map, slot->slot_key, slot->slot_index);
 		}
-		if (slot_index>=0) {
-			result = (GObject *) a_array_at(priv->data, slot_index);
+		if (slot->slot_index>=0) {
+			result = (GObject *) a_array_at(priv->data, slot->slot_index);
 			a_ref(result);
 		}
 	}
@@ -142,16 +141,16 @@ GObject *buz_enrichment_data_get_slot_content_ref(const BuzEnrichmentData *enric
 	return result;
 }
 
-void buz_enrichment_data_set_slot_content(const BuzEnrichmentData *enrichment_data, int slot_index, AStringAnchored *slot_key, GObject *content) {
+void buz_enrichment_data_set_slot_content(const BuzEnrichmentData *enrichment_data, BuzEnrichmentSlot *slot, GObject *content) {
 	BuzEnrichmentDataPrivate *priv = buz_enrichment_data_get_instance_private((BuzEnrichmentData *) enrichment_data);
 	a_lock_lock(priv->lock);
-	if (slot_key) {
-		slot_index = buz_enrichment_data_map_find_slot_index(priv->enrichment_map, slot_key, slot_index);
+	if (slot->slot_key) {
+		slot->slot_index = buz_enrichment_data_map_find_slot_index(priv->enrichment_map, slot->slot_key, slot->slot_index);
 	}
 	a_log_debug("map=%p, slot_index=%d, slot_key=%o, content=%o", priv->enrichment_map, slot_index, slot_key, content);
-	if (slot_index>=0) {
+	if (slot->slot_index>=0) {
 		l_ensure_data(priv);
-		a_array_set_at(priv->data, content, slot_index);
+		a_array_set_at(priv->data, content, slot->slot_index);
 	}
 	a_lock_unlock(priv->lock);
 

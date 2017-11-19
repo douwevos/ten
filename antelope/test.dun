@@ -10,7 +10,7 @@ module {
 	compile {
 		cc { 
 			src { path './src-ut/'; }
-			natpad.cc.args {}
+			global.cc.args {}
 		
 			arg '-lm';
 			destdir './compiled-ut/'; 
@@ -24,7 +24,7 @@ module {
 				path './compiled-ut/';
 			}
 			output './antelope-ut';
-			natpad.cc.args {}
+			global.cc.args {}
 			test {
 				arg '-lm';
 			}

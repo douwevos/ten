@@ -30,6 +30,8 @@
 struct _AContext {
 	AAltObjectContext parent;
 	AStringShady *text;
+	BuzEnrichmentData *enrichment_data;
+	int enriched_count;
 };
 
 struct _AEditContext {
@@ -81,6 +83,7 @@ BuzRow *buz_row_new() {
 	a_alt_object_construct((AAltObject *) result, TRUE);
 	AContext *context = (AContext *) a_alt_object_private(result)->context;
 	context->text = a_string_new();
+	context->enrichment_data = NULL;
 	return result;
 }
 
@@ -97,6 +100,41 @@ AString *buz_row_editable_text(BuzRow *row) {
 		a_unref(text);
 	}
 	return (AString *) context->text;
+}
+
+void buz_row_enrichment_remap(BuzRowShady *row, BuzEnrichmentDataMapAnchored *old_map, BuzEnrichmentDataMapAnchored *new_map, BuzEnrichmentAction action, int index) {
+	AContext *context = (AContext *) a_alt_object_private(row)->context;
+	if (context->enrichment_data) {
+		buz_enrichment_data_remap(context->enrichment_data, old_map, new_map, action, index);
+	}
+}
+
+void buz_row_enrich(BuzRowAnchored *row, BuzEnrichmentDataMapAnchored *enrichment_map, ALock *lock) {
+	AContext *context = (AContext *) a_alt_object_private(row)->context;
+	if (context->enriched_count==0) {
+		if (context->enrichment_data==NULL) {
+			context->enrichment_data = buz_enrichment_data_new_lock(enrichment_map, lock);
+		}
+	}
+	context->enriched_count++;
+}
+
+void buz_row_impoverish(BuzRowAnchored *row) {
+	AContext *context = (AContext *) a_alt_object_private(row)->context;
+	if (context->enriched_count==1) {
+		a_deref(context->enrichment_data);
+	}
+	context->enriched_count--;
+}
+
+GObject *buz_row_get_slot_content_ref(BuzRowAnchored *row, BuzEnrichmentSlot *slot) {
+	AContext *context = (AContext *) a_alt_object_private(row)->context;
+	return buz_enrichment_data_get_slot_content_ref(context->enrichment_data, slot);
+}
+
+void buz_row_set_slot_content(BuzRowAnchored *row, BuzEnrichmentSlot *slot, GObject *content) {
+	AContext *context = (AContext *) a_alt_object_private(row)->context;
+	buz_enrichment_data_set_slot_content(context->enrichment_data, slot, content);
 }
 
 BuzRowAnchored *buz_row_anchor(BuzRowShady *row) {

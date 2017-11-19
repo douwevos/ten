@@ -23,6 +23,7 @@
 #ifndef LAYOUT_BUZTEXTLAYOUT_H_
 #define LAYOUT_BUZTEXTLAYOUT_H_
 
+#include "buztextlinelayout.h"
 #include "buzlayoutcontext.h"
 #include <antelope.h>
 
@@ -54,11 +55,19 @@ GType buz_text_layout_get_type();
 
 BuzTextLayout *buz_text_layout_new(BuzLayoutContext *context);
 
+BuzLayoutContext *buz_text_layout_get_layout_context(BuzTextLayout *layout);
+
 void buz_text_layout_set_text(BuzTextLayout *layout, AStringShady *text);
 
 void buz_text_layout_show(BuzTextLayout *layout, cairo_t *cairo);
 
 double buz_text_layout_get_height(BuzTextLayout *layout);
+
+const BuzSize buz_text_layout_get_size(BuzTextLayout *layout);
+
+int buz_text_layout_line_count(BuzTextLayout *layout);
+
+BuzTextLineLayout *buz_text_layout_line_at(BuzTextLayout *layout, int index);
 
 G_END_DECLS
 

@@ -62,19 +62,21 @@ static void l_dispose(GObject *object) {
 }
 
 static void l_finalize(GObject *object) {
+	AAltObjectClass *a_cls = A_ALT_OBJECT_GET_CLASS(object);
 	AAltObject *alt_object = (AAltObject *) object;
 	AAltObjectPrivate *priv = a_alt_object_get_instance_private(alt_object);
 	const AAltObjectContext *orig_context = a_alt_object_editor_get_original_context((AAltObjectEditor *) priv->editor);
 	if (priv->context && orig_context!=priv->context) {
+
 		if (g_atomic_int_dec_and_test(&(priv->context->ref_count))) {
-			g_free(priv->context);
+			g_slice_free1(a_cls->context_size, priv->context);
 //			printf("a_alt_object_anchor: free context %p, orig_context=%p, editor=%p\n", priv->context, orig_context, priv->editor);
 			priv->context = NULL;
 		}
 	}
 
 	if (priv->editor) {
-		g_free(priv->editor);
+		g_slice_free1(a_cls->editor_size, priv->editor);
 		priv->editor = NULL;
 	}
 
@@ -85,9 +87,9 @@ static void l_finalize(GObject *object) {
 void a_alt_object_construct(AAltObject *object, gboolean mutable) {
 	AAltObjectPrivate *priv = a_alt_object_get_instance_private(object);
 	AAltObjectClass *a_cls = A_ALT_OBJECT_GET_CLASS(object);
-	priv->context = g_malloc0(a_cls->context_size);
+	priv->context = g_slice_alloc0(a_cls->context_size);
 	if (mutable) {
-		priv->editor = g_malloc0(a_cls->editor_size);
+		priv->editor = g_slice_alloc0(a_cls->editor_size);
 	}
 	priv->context->ref_count = 1;
 	a_object_construct((AObject *) object);
@@ -99,7 +101,7 @@ AAltObjectPrivate *a_alt_object_private(gconstpointer object) {
 
 
 static AAltObjectContext *l_clone(AAltObjectClass *a_cls, const AAltObjectContext *context) {
-	AAltObjectContext *result = g_malloc0(a_cls->context_size);
+	AAltObjectContext *result = g_slice_alloc0(a_cls->context_size);
 	result->ref_count = 1;
 	if (a_cls->cloneContext) {
 		a_cls->cloneContext(context, result);
@@ -190,8 +192,20 @@ gconstpointer a_alt_object_anchor(gconstpointer object) {
 		}
 	}
 
+	if (((GObject *) object)->ref_count==1) {
+		/* there is only one reference, this must be the only editor. We just convert it to anchored and return it */
+		if (editor->origin) {
+			a_unref(priv->editor->origin);
+			priv->editor->origin = NULL;
+		}
+		g_slice_free1(a_class->editor_size, priv->editor);
+		priv->editor = NULL;
+		return object;
+	}
+
 	/* We create a new anchored object. The current editable object is modified so that the origin (if any) is changes to the new anchored object */
 	GTypeInstance *objinst = (GTypeInstance *) object;
+
 	GType type = objinst->g_class->g_type;
 
 	AAltObject *result = g_object_new(type, NULL);
@@ -228,33 +242,32 @@ gpointer a_alt_object_mutable(gconstpointer object) {
 	AAltObject *result = g_object_new(type, NULL);
 	AAltObjectPrivate *rpriv = a_alt_object_get_instance_private(result);
 	AAltObjectClass *a_cls = A_ALT_OBJECT_GET_CLASS(object);
-	AAltObjectEditor *editor = g_malloc0(a_cls->editor_size);
+	AAltObjectEditor *editor = g_slice_alloc0(a_cls->editor_size);
 	rpriv->editor = editor;
 
-	gboolean should_clone_context = FALSE;
 	AAltObjectEditor *old_editor = g_atomic_pointer_get(&(priv->editor));
 	if (old_editor) {
-		should_clone_context = TRUE;
+		/* the source object is still mutable */
 		const AAltObjectContext *old_editor_context = a_alt_object_editor_get_original_context((AAltObjectEditor *) old_editor);
-		if (old_editor_context==priv->context) {
-			should_clone_context = FALSE;
+		if ((old_editor_context==priv->context) && !a_cls->clone_context_for_mutable) {
+			/* the source object is mutable but has not changed since it became mutable. We can reference the original context */
 			editor->origin = a_ref(old_editor->origin);
+			rpriv->context = priv->context;
+			g_atomic_int_inc(&(rpriv->context->ref_count));
+		} else {
+			rpriv->context = l_clone(a_cls, priv->context);
 		}
 	} else {
+		/* the source object is anchored */
 		editor->origin = a_ref((gpointer) object);
-	}
+		if (a_cls->clone_context_for_mutable) {
+			rpriv->context = l_clone(a_cls, priv->context);
+		} else {
+			rpriv->context = priv->context;
+			g_atomic_int_inc(&(rpriv->context->ref_count));
+		}
 
-//	printf("a_alt_object_mutable(%d):object=%p, should_clone=%d\n", __LINE__, object, should_clone_context);
-	if (should_clone_context) {
-		AAltObjectPrivate *opriv = a_alt_object_get_instance_private((AAltObject *) old_editor->origin);
-		rpriv->context = l_clone(a_cls, opriv->context);
-	} else if (a_cls->clone_context_for_mutable) {
-		rpriv->context = l_clone(a_cls, priv->context);
-	} else {
-		rpriv->context = priv->context;
-		g_atomic_int_inc(&(rpriv->context->ref_count));
 	}
-
 
 //	printf("a_alt_object_mutable(%d):object=%p, context=%p\n", __LINE__, object, rpriv->context);
 

@@ -59,7 +59,7 @@ static void _test_format(ATestContext *context) {
 	a_string_append_decimal(e_manual, 1000);
 	a_string_append_chars(e_manual, ", pointer=");
 	a_string_append_chars_len(e_manual, "0x", 3);
-	a_string_append_hexadecimal(e_manual, (unsigned long long int) dummy_map, -1);
+	a_string_append_hexadecimal(e_manual, (unsigned long long int) dummy_map, -1, FALSE);
 
 	a_test_context_test_for_true(context, a_string_equal(e_manual, e_formated), "formatting");
 
