@@ -72,7 +72,7 @@ BuzLayoutContext *buz_layout_context_new(PangoContext *pango_context) {
 	PangoLayout *layout = pango_layout_new(pango_context);
 	pango_layout_set_text(layout, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", 50);
 	PangoRectangle inkt_rect;
-	pango_layout_get_pixel_extents(layout, &inkt_rect, NULL);
+	pango_layout_get_extents(layout, NULL, &inkt_rect);
 	priv->font_height = ((inkt_rect.height+PANGO_SCALE-1)/PANGO_SCALE);
 
 	return result;

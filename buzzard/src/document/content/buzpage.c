@@ -156,6 +156,7 @@ A_ALT_C(BuzPage, buz_page);
 static void l_a_clone(const AAltObjectContext *context_from, AAltObjectContext *context_to) {
 	const BuzPageContext *from = (const BuzPageContext *) context_from;
 	BuzPageContext *to = (BuzPageContext *) context_to;
+	to->lock = a_ref(from->lock);
 }
 
 static void l_a_anchor_content(AAltObject *object) {

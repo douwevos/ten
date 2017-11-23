@@ -33,6 +33,7 @@ struct _BuzTextLayoutPrivate {
 	PangoLayout *pango_layout;
 
 	AArray *lines;
+	BuzSize size;
 };
 
 G_DEFINE_TYPE_WITH_CODE(BuzTextLayout, buz_text_layout, A_TYPE_OBJECT,
@@ -93,12 +94,23 @@ void buz_text_layout_set_text(BuzTextLayout *layout, AStringShady *text) {
 		return;
 	}
 	priv->text = a_string_anchor(a_ref(text));
-	pango_layout_set_text(priv->pango_layout, a_string_chars(priv->text), a_string_length(priv->text));
+	if (a_string_length(priv->text)==0) {
+		pango_layout_set_text(priv->pango_layout, " ", 1);
+	} else {
+		pango_layout_set_text(priv->pango_layout, a_string_chars(priv->text), a_string_length(priv->text));
+	}
+	priv->size.height = 0;
+	priv->size.width = 0;
 	a_array_remove_all(priv->lines);
 	int line_count = pango_layout_get_line_count(priv->pango_layout);
 	int line_idx;
 	for(line_idx=0; line_idx<line_count; line_idx++) {
 		BuzTextLineLayout *line_layout = buz_text_line_layout_new(pango_layout_get_line_readonly(priv->pango_layout, line_idx));
+		const BuzSize ll_size = buz_text_line_layout_get_size(line_layout);
+		priv->size.height += ll_size.height;
+		if (ll_size.width>priv->size.width) {
+			priv->size.width = ll_size.width;
+		}
 		a_array_add(priv->lines, line_layout);
 		a_unref(line_layout);
 	}
@@ -111,20 +123,12 @@ void buz_text_layout_show(BuzTextLayout *layout, cairo_t *cairo) {
 
 double buz_text_layout_get_height(BuzTextLayout *layout) {
 	BuzTextLayoutPrivate *priv = buz_text_layout_get_instance_private(layout);
-
-	PangoRectangle inkt_rect;
-	pango_layout_get_extents(priv->pango_layout, NULL, &inkt_rect);
-	return (double) (inkt_rect.height)/PANGO_SCALE;
+	return priv->size.height;
 }
 
 const BuzSize buz_text_layout_get_size(BuzTextLayout *layout) {
 	BuzTextLayoutPrivate *priv = buz_text_layout_get_instance_private(layout);
-	PangoRectangle inkt_rect;
-	pango_layout_get_extents(priv->pango_layout, NULL, &inkt_rect);
-	BuzSize result;
-	result.height = (inkt_rect.height+PANGO_SCALE-1)/PANGO_SCALE;
-	result.width = (inkt_rect.width+PANGO_SCALE-1)/PANGO_SCALE;
-	return result;
+	return priv->size;
 }
 
 

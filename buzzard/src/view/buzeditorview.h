@@ -23,6 +23,7 @@
 #ifndef VIEW_BUZEDITORVIEW_H_
 #define VIEW_BUZEDITORVIEW_H_
 
+#include "buzview.h"
 #include "../document/buzdocument.h"
 #include <antelope.h>
 #include <gtk/gtk.h>
@@ -61,7 +62,11 @@ void buz_editor_view_set_view_size(BuzEditorView *editor_view, int width, int he
 
 void buz_editor_view_draw(BuzEditorView *editor_view, cairo_t *cr);
 
+void buz_editor_view_set_adjustments(BuzEditorView *editor_view, GtkAdjustment *hadjustment, GtkAdjustment *vadjustment);
 
+BuzView *buz_editor_view_get_view(BuzEditorView *editor_view);
+
+glong buz_editor_view_set_view_y(BuzEditorView *editor_view, glong view_y);
 
 G_END_DECLS
 

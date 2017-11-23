@@ -29,7 +29,7 @@
 #include "../layout/buztextlinelayout.h"
 #include <gtk/gtk.h>
 
-#define A_LOG_LEVEL A_LOG_ALL
+#define A_LOG_LEVEL A_LOG_WARN
 #define A_LOG_CLASS "BuzView"
 #include <asupport.h>
 
@@ -40,6 +40,9 @@ struct _BuzViewPrivate {
 	int view_config_id;
 	BuzLayoutContext *layout_context;
 	BuzViewDimensions view_dimensions;
+
+	long long layout_height;
+	int layout_width;
 
 	long long first_line_view_y;
 	AArray *lines_in_view;
@@ -119,20 +122,11 @@ void buz_view_set_layout_context(BuzView *view, BuzLayoutContext *layout_context
 	// TODO this should invalidate all view data
 }
 
-
-static void l_document_new_revision(BuzDocumentListener *listener, BuzRevisionAnchored *revision) {
-	BuzView *instance = BUZ_VIEW(listener);
-	BuzViewPrivate *priv = buz_view_get_instance_private(instance);
-	a_swap_ref(priv->revision , revision);
-
-
-//	AIterator *iter = buz_revision_page_iterator(revision);
-//	BuzPageAnchored *page=NULL;
-//	while(a_iterator_next(iter, (gconstpointer *) &page)) {
-//		buz_page_
-//	}
-//
+void buz_view_set_top(BuzView *view, long long top) {
+	BuzViewPrivate *priv = buz_view_get_instance_private(view);
+	priv->view_dimensions.top = top;
 }
+
 
 void buz_view_set_view_size(BuzView *view, int width, int height) {
 	BuzViewPrivate *priv = buz_view_get_instance_private(view);
@@ -143,6 +137,16 @@ void buz_view_set_view_size(BuzView *view, int width, int height) {
 const BuzViewDimensions buz_view_get_dimensions(BuzView *view) {
 	BuzViewPrivate *priv = buz_view_get_instance_private(view);
 	return priv->view_dimensions;
+}
+
+long long buz_view_get_layout_height(BuzView *view) {
+	BuzViewPrivate *priv = buz_view_get_instance_private(view);
+	return priv->layout_height;
+}
+
+int buz_view_get_layout_width(BuzView *view) {
+	BuzViewPrivate *priv = buz_view_get_instance_private(view);
+	return priv->layout_width;
 }
 
 BuzPageView *l_create_page_view(BuzView *view, BuzPageAnchored *page) {
@@ -160,6 +164,7 @@ void buz_view_update_lines(BuzView *view) {
 		a_unref(priv->lines_in_view);
 	}
 	AIterator *page_iter = buz_revision_page_iterator(priv->revision);
+	a_log_debug("page-count=%d", buz_revision_page_count(priv->revision));
 
 	long long top = priv->view_dimensions.top;
 	long long bottom = priv->view_dimensions.top + priv->view_dimensions.height;
@@ -167,6 +172,10 @@ void buz_view_update_lines(BuzView *view) {
 
 	AArray *lines_in_view = a_array_new();
 	long long first_line_view_y = 0;
+
+	int max_width = 0;
+
+
 
 	BuzPageAnchored *page = NULL;
 	while(a_iterator_next(page_iter, (gconstpointer *) &page)) {
@@ -177,13 +186,17 @@ void buz_view_update_lines(BuzView *view) {
 			a_unref(page_view);
 		}
 
+
+
 		int page_height = buz_page_view_get_height(page_view);
+		a_log_debug("page_height=%d, page=%p, page_view=%p", page_height, page, page_view);
 		long long offset_next_y = offset_y+page_height;
 		if (offset_next_y>=top) {
 			if (BUZ_IS_MATERIALIZED_PAGE(page)) {
 				offset_next_y = offset_y;
 				BuzMaterializedPageShady *mat_page = (BuzMaterializedPageShady *) page;
 				int row_count = buz_page_row_count(page);
+				a_log_debug("row_count=%d", row_count);
 				int row_idx;
 				for(row_idx=0; row_idx<row_count; row_idx++) {
 					BuzRowShady *row = buz_materialized_page_row_at(mat_page, row_idx);
@@ -211,12 +224,21 @@ void buz_view_update_lines(BuzView *view) {
 								a_array_add(lines_in_view, line_layout);
 							}
 							line_y += l_size.height;
+							if (max_width<l_size.width) {
+								max_width = l_size.width;
+							}
 						}
 					}
 
+					a_log_debug("row[%d]=%d", row_idx, line_size.height, offset_next_y);
 					offset_next_y += line_size.height;
 				}
+				int new_page_height = (int) offset_next_y-offset_y;
+				buz_page_view_set_height(page_view, new_page_height);
+			} else {
+//				// TODO page is not materialized ... we need it to materialize
 			}
+
 		}
 		offset_y = offset_next_y;
 	}
@@ -224,6 +246,14 @@ void buz_view_update_lines(BuzView *view) {
 	a_swap_ref(priv->lines_in_view, lines_in_view);
 	a_unref(lines_in_view);
 	priv->first_line_view_y = first_line_view_y;
+
+	a_log_debug("%p, layout_height=%ld, offset_y=%ld, revision=%p", view, priv->layout_height, offset_y, priv->revision);
+
+	if ((max_width!=priv->layout_width) || (offset_y!=priv->layout_height)) {
+		priv->layout_width = max_width;
+		priv->layout_height = offset_y;
+	}
+
 }
 
 AArray *buz_view_get_lines(BuzView *view, long long *first_line_y_view) {
@@ -232,6 +262,24 @@ AArray *buz_view_get_lines(BuzView *view, long long *first_line_y_view) {
 		 *first_line_y_view = priv->first_line_view_y;
 	 }
 	 return priv->lines_in_view;
+}
+
+
+
+static void l_document_new_revision(BuzDocumentListener *listener, BuzRevisionAnchored *revision) {
+	BuzView *instance = BUZ_VIEW(listener);
+	BuzViewPrivate *priv = buz_view_get_instance_private(instance);
+	if (priv->revision==revision) {
+		return;
+	}
+	BuzEnrichmentDataMapAnchored *enrichment_map = buz_document_get_enrichment_map(priv->document);
+	if (revision) {
+		buz_revision_enrich(revision, enrichment_map);
+	}
+	if (priv->revision) {
+		buz_revision_impoverish(priv->revision);
+	}
+	a_swap_ref(priv->revision , revision);
 }
 
 

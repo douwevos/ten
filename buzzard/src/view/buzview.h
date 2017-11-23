@@ -66,9 +66,14 @@ void buz_view_construct(BuzView *view, BuzDocument *document);
 BuzView *buz_view_new(BuzDocument *document);
 void buz_view_set_layout_context(BuzView *view, BuzLayoutContext *layout_context);
 
+void buz_view_set_top(BuzView *view, long long top);
+
 void buz_view_set_view_size(BuzView *view, int width, int height);
 
 const BuzViewDimensions buz_view_get_dimensions(BuzView *view);
+
+long long buz_view_get_layout_height(BuzView *view);
+int buz_view_get_layout_width(BuzView *view);
 
 void buz_view_update_lines(BuzView *view);
 

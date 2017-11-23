@@ -130,6 +130,11 @@ void buz_document_remove_listener(BuzDocument *document, BuzDocumentListener *li
 	a_weak_list_remove(priv->listeners, (GObject *) listener);
 }
 
+BuzEnrichmentDataMapAnchored *buz_document_get_enrichment_map(BuzDocument *document) {
+	BuzDocumentPrivate *priv = buz_document_get_instance_private(document);
+	return priv->enrichment_map;
+}
+
 void buz_document_post_enrichment_slot_notify(BuzDocument *document, BuzRevision *a_revision, AStringAnchored *slot_key, gpointer user_data) {
 	BuzDocumentPrivate *priv = buz_document_get_instance_private(document);
 	/* notify listeners */

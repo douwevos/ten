@@ -36,6 +36,11 @@ struct _BuzEditorViewPrivate {
 	BuzDocument *document;
 	GtkWidget *widget;
 	BuzView *view;
+
+	GtkAdjustment *hadjustment;
+	GtkAdjustment *vadjustment;
+	long long last_layout_height;
+
 };
 
 static void l_document_listener_iface_init(BuzDocumentListenerInterface *iface);
@@ -95,6 +100,12 @@ BuzEditorView *buz_editor_view_new(BuzDocument *document, GtkWidget *widget) {
 }
 
 
+void buz_editor_view_set_adjustments(BuzEditorView *editor_view, GtkAdjustment *hadjustment, GtkAdjustment *vadjustment) {
+	BuzEditorViewPrivate *priv = buz_editor_view_get_instance_private(editor_view);
+	priv->hadjustment = a_ref(hadjustment);
+	priv->vadjustment = a_ref(vadjustment);
+}
+
 gboolean buz_editor_view_key_pressed(BuzEditorView *editor_view, GdkEventKey *event) {
 	BuzEditorViewPrivate *priv = buz_editor_view_get_instance_private(editor_view);
 	BuzRevisionAnchored *revision_anc = buz_document_get_revision_ref(priv->document);
@@ -114,14 +125,63 @@ void buz_editor_view_set_view_size(BuzEditorView *editor_view, int width, int he
 	buz_view_set_view_size(priv->view, width, height);
 }
 
+BuzView *buz_editor_view_get_view(BuzEditorView *editor_view) {
+	BuzEditorViewPrivate *priv = buz_editor_view_get_instance_private(editor_view);
+	return priv->view;
+}
+
+glong buz_editor_view_set_view_y(BuzEditorView *editor_view, glong view_y) {
+	BuzEditorViewPrivate *priv = buz_editor_view_get_instance_private(editor_view);
+	const BuzViewDimensions dims = buz_view_get_dimensions(priv->view);
+	// TODO:
+	glong result = (glong) dims.top;
+	buz_view_set_top(priv->view, view_y);
+    glong dy = result - view_y;
+    a_log_debug("view_y=%ld", view_y);
+
+	GdkWindow *window = gtk_widget_get_window(priv->widget);
+//	cha_document_view_set_in_scroll(priv->document_view, TRUE);
+//	if (!cha_document_view_check_cache_boundaries(priv->document_view)) {
+//		cha_document_view_invalidate_lines(priv->document_view);
+//	}
+	gdk_window_scroll(window, 0, dy);
+	gdk_window_process_updates(window, TRUE);
+//	cha_document_view_set_in_scroll(priv->document_view, FALSE);
+
+	return result;
+}
+
+
 
 void buz_editor_view_draw(BuzEditorView *editor_view, cairo_t *cr) {
 	BuzEditorViewPrivate *priv = buz_editor_view_get_instance_private(editor_view);
 
+
+	buz_view_update_lines(priv->view);
 	const BuzViewDimensions view_dimensions = buz_view_get_dimensions(priv->view);
 	long long top = view_dimensions.top;
 
-	buz_view_update_lines(priv->view);
+	long long layout_height = buz_view_get_layout_height(priv->view);
+
+	if (priv->last_layout_height!=layout_height) {
+		priv->last_layout_height = layout_height;
+		if (priv->vadjustment) {
+			gdouble new_upper = (gdouble) layout_height;
+			gdouble old_value = gtk_adjustment_get_value(priv->vadjustment);
+			int view_height = gtk_adjustment_get_page_size(priv->vadjustment);
+			new_upper = MAX(layout_height, view_height);
+
+			a_log_error("new-upper=%d, priv->vadjustment=%p, view_height=%d, layout_height=%d", (int) new_upper, priv->vadjustment, view_height, layout_height);
+			gtk_adjustment_set_upper(priv->vadjustment, new_upper);
+
+			gdouble new_value = CLAMP(old_value, 0, new_upper - view_height);
+			if (new_value != old_value) {
+				gtk_adjustment_set_value (priv->vadjustment, new_value);
+			}
+		}
+	}
+
+
 	long long first_line_y_view = 0;
 	AArray *lines = buz_view_get_lines(priv->view, &first_line_y_view);
 
@@ -132,7 +192,7 @@ void buz_editor_view_draw(BuzEditorView *editor_view, cairo_t *cr) {
 		while(a_iterator_next(lines_iter, &line)) {
 			cairo_move_to(cr, 0, view_y);
 			int height = buz_text_line_layout_show(line, cr);
-			a_log_error("height=%d, y=%ld", height, view_y)
+			a_log_debug("height=%d, y=%ld", height, view_y)
 			view_y += height;
 		}
 		a_unref(lines);

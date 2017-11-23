@@ -111,6 +111,7 @@ void buz_row_enrichment_remap(BuzRowShady *row, BuzEnrichmentDataMapAnchored *ol
 
 void buz_row_enrich(BuzRowAnchored *row, BuzEnrichmentDataMapAnchored *enrichment_map, ALock *lock) {
 	AContext *context = (AContext *) a_alt_object_private(row)->context;
+	a_log_debug("enriching row:%o, context->enriched_count=%d", row, context->enriched_count);
 	if (context->enriched_count==0) {
 		if (context->enrichment_data==NULL) {
 			context->enrichment_data = buz_enrichment_data_new_lock(enrichment_map, lock);
@@ -129,6 +130,7 @@ void buz_row_impoverish(BuzRowAnchored *row) {
 
 GObject *buz_row_get_slot_content_ref(BuzRowAnchored *row, BuzEnrichmentSlot *slot) {
 	AContext *context = (AContext *) a_alt_object_private(row)->context;
+	a_log_debug("get-slot_content:%O, slot=%p", row, slot);
 	return buz_enrichment_data_get_slot_content_ref(context->enrichment_data, slot);
 }
 

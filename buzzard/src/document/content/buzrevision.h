@@ -60,6 +60,7 @@ void buz_revision_insert(BuzRevision *revision, AStringShady *text);
 
 void buz_revision_set_page_at(BuzRevision *revision, BuzPageShady *page, int page_index);
 
+int buz_revision_page_count(BuzRevisionShady *revision);
 AIterator *buz_revision_page_iterator(BuzRevisionShady *revision);
 
 void buz_revision_enrichment_remap(BuzRevisionAnchored *revision, BuzEnrichmentDataMapAnchored *old_map, BuzEnrichmentDataMapAnchored *new_anchored, BuzEnrichmentAction action, int index);
