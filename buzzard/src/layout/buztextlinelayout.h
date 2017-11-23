@@ -60,7 +60,11 @@ GType buz_text_line_layout_get_type();
 
 BuzTextLineLayout *buz_text_line_layout_new(PangoLayoutLine *layout_line);
 
+gboolean buz_text_line_layout_same_row(BuzTextLineLayout *line_layout, BuzTextLineLayout *other_line_layout);
+
 const BuzSize buz_text_line_layout_get_size(BuzTextLineLayout *line_layout);
+
+int buz_text_line_layout_view_x_at(BuzTextLineLayout *line_layout, int byte_index);
 
 int buz_text_line_layout_show(BuzTextLineLayout *line_layout, cairo_t *cr);
 

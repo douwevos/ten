@@ -44,6 +44,7 @@ struct _BuzViewPrivate {
 	long long layout_height;
 	int layout_width;
 
+	long long first_line_row;
 	long long first_line_view_y;
 	AArray *lines_in_view;
 };
@@ -169,9 +170,11 @@ void buz_view_update_lines(BuzView *view) {
 	long long top = priv->view_dimensions.top;
 	long long bottom = priv->view_dimensions.top + priv->view_dimensions.height;
 	long long offset_y = 0;
+	long long row_number = 0;
 
 	AArray *lines_in_view = a_array_new();
 	long long first_line_view_y = 0;
+	long long first_line_row = 0;
 
 	int max_width = 0;
 
@@ -188,6 +191,7 @@ void buz_view_update_lines(BuzView *view) {
 
 
 
+		int row_count = buz_page_row_count(page);
 		int page_height = buz_page_view_get_height(page_view);
 		a_log_debug("page_height=%d, page=%p, page_view=%p", page_height, page, page_view);
 		long long offset_next_y = offset_y+page_height;
@@ -195,7 +199,6 @@ void buz_view_update_lines(BuzView *view) {
 			if (BUZ_IS_MATERIALIZED_PAGE(page)) {
 				offset_next_y = offset_y;
 				BuzMaterializedPageShady *mat_page = (BuzMaterializedPageShady *) page;
-				int row_count = buz_page_row_count(page);
 				a_log_debug("row_count=%d", row_count);
 				int row_idx;
 				for(row_idx=0; row_idx<row_count; row_idx++) {
@@ -220,6 +223,7 @@ void buz_view_update_lines(BuzView *view) {
 							if ((top<line_y+l_size.height) && (bottom>line_y)){
 								if (a_array_size(lines_in_view)==0) {
 									first_line_view_y = line_y;
+									first_line_row = row_number+row_idx;
 								}
 								a_array_add(lines_in_view, line_layout);
 							}
@@ -241,11 +245,13 @@ void buz_view_update_lines(BuzView *view) {
 
 		}
 		offset_y = offset_next_y;
+		row_number += row_count;
 	}
 
 	a_swap_ref(priv->lines_in_view, lines_in_view);
 	a_unref(lines_in_view);
 	priv->first_line_view_y = first_line_view_y;
+	priv->first_line_row = first_line_row;
 
 	a_log_debug("%p, layout_height=%ld, offset_y=%ld, revision=%p", view, priv->layout_height, offset_y, priv->revision);
 
@@ -256,10 +262,13 @@ void buz_view_update_lines(BuzView *view) {
 
 }
 
-AArray *buz_view_get_lines(BuzView *view, long long *first_line_y_view) {
+AArray *buz_view_get_lines(BuzView *view, long long *first_line_y_view, long long *first_line_row) {
 	BuzViewPrivate *priv = buz_view_get_instance_private(view);
 	 if (first_line_y_view) {
 		 *first_line_y_view = priv->first_line_view_y;
+	 }
+	 if (first_line_row) {
+		 *first_line_row = priv->first_line_row;
 	 }
 	 return priv->lines_in_view;
 }

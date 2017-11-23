@@ -77,8 +77,7 @@ int buz_view_get_layout_width(BuzView *view);
 
 void buz_view_update_lines(BuzView *view);
 
-AArray *buz_view_get_lines(BuzView *view, long long *first_line_y_view);
-
+AArray *buz_view_get_lines(BuzView *view, long long *first_line_y_view, long long *first_line_row);
 
 G_END_DECLS
 
