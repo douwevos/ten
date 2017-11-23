@@ -91,6 +91,11 @@ BuzContent *buz_content_new() {
 	return result;
 }
 
+int buz_content_page_count(BuzContentShady *content) {
+	AContext *context = (AContext *) a_alt_object_private(content)->context;
+	return a_array_size(context->pages);
+}
+
 AIterator *buz_content_page_iterator(BuzContentShady *content) {
 	AContext *context = (AContext *) a_alt_object_private(content)->context;
 	return a_array_iterator(context->pages);
@@ -211,7 +216,7 @@ static void l_a_clone(const AAltObjectContext *context_from, AAltObjectContext *
 	AContext *to = (AContext *) context_to;
 	to->pages = a_mutable_ref(from->pages);
 	to->enriched_count = 0;
-	to->enrichment_data = a_ref(from->enrichment_data);
+	to->enrichment_data = NULL;
 }
 
 static void l_a_anchor_content(AAltObject *object) {

@@ -127,56 +127,58 @@ BuzEditor *buz_editor_new(BuzDocument *document) {
 
 
 static void l_set_hadjustment_values(BuzEditor *editor) {
-//	BuzEditorPrivate *priv = buz_editor_get_instance_private(editor);
-//	GtkAllocation allocation;
-//	gtk_widget_get_allocation(GTK_WIDGET(editor), &allocation);
-//	int view_width = allocation.width;
-//
-//	gdouble old_value = gtk_adjustment_get_value(priv->hadjustment);
-//	gdouble new_upper = view_width * 2;
-////  gdouble new_upper = MAX (screen_width, priv->width);
-//	g_object_set(priv->hadjustment, "lower", 0.0, "upper", new_upper,
-//			"page-size", (gdouble) view_width,
-//			"step-increment", view_width * 0.1, "page-increment", view_width * 0.9,
-//			NULL);
-//
-//	gdouble new_value = CLAMP(old_value, 0, new_upper - view_width);
-//	if (new_value != old_value) {
-//		gtk_adjustment_set_value (priv->hadjustment, new_value);
-//	}
+	BuzEditorPrivate *priv = buz_editor_get_instance_private(editor);
+	GtkAllocation allocation;
+	gtk_widget_get_allocation(GTK_WIDGET(editor), &allocation);
+	int view_width = allocation.width;
+
+	gdouble old_value = gtk_adjustment_get_value(priv->hadjustment);
+	gdouble new_upper = view_width * 2;
+//  gdouble new_upper = MAX (screen_width, priv->width);
+	g_object_set(priv->hadjustment, "lower", 0.0, "upper", new_upper,
+			"page-size", (gdouble) view_width,
+			"step-increment", view_width * 0.1, "page-increment", view_width * 0.9,
+			NULL);
+
+	gdouble new_value = CLAMP(old_value, 0, new_upper - view_width);
+	if (new_value != old_value) {
+		gtk_adjustment_set_value (priv->hadjustment, new_value);
+	}
 }
 
 
 
 static void l_set_vadjustment_values(BuzEditor *editor) {
-//	BuzEditorPrivate *priv = buz_editor_get_instance_private(editor);
-//	GtkAllocation allocation;
-//	gtk_widget_get_allocation(GTK_WIDGET(editor), &allocation);
-//	int view_height = allocation.height;
-//
-//	gdouble old_value = gtk_adjustment_get_value(priv->vadjustment);
-//	gdouble new_upper = gtk_adjustment_get_upper(priv->vadjustment);
-//	if (priv->document_view) {
+	BuzEditorPrivate *priv = buz_editor_get_instance_private(editor);
+	GtkAllocation allocation;
+	gtk_widget_get_allocation(GTK_WIDGET(editor), &allocation);
+	int view_height = allocation.height;
+
+	gdouble old_value = gtk_adjustment_get_value(priv->vadjustment);
+	gdouble new_upper = gtk_adjustment_get_upper(priv->vadjustment);
+	if (priv->editor_view) {
+		BuzView *view = buz_editor_view_get_view(priv->editor_view);
+		long long layout_height = buz_view_get_layout_height(view);
 //		long long int layout_height = cha_document_view_get_layout_height(priv->document_view);
-//		new_upper = MAX(layout_height, view_height);
-//	}
-//	cat_log_trace("view_height=%d, new_upper=%d", view_height, (int) new_upper);
-////  gdouble new_upper = MAX (screen_width, priv->width);
-//	g_object_set(priv->vadjustment, "lower", 0.0, "upper", new_upper,
-//			"page-size", (gdouble) view_height,
-//			"step-increment", view_height * 0.1, "page-increment", view_height * 0.9,
-//			NULL);
-//
-//	gdouble new_value = CLAMP(old_value, 0, new_upper - view_height);
-//	cat_log_trace("new_value=%d", (int) new_value);
-//	if (new_value != old_value) {
-//		gtk_adjustment_set_value (priv->vadjustment, new_value);
-//	}
+		new_upper = MAX(layout_height, view_height);
+	}
+	a_log_error("view_height=%d, new_upper=%d", view_height, (int) new_upper);
+//  gdouble new_upper = MAX (screen_width, priv->width);
+	g_object_set(priv->vadjustment, "lower", 0.0, "upper", new_upper,
+			"page-size", (gdouble) view_height,
+			"step-increment", view_height * 0.1, "page-increment", view_height * 0.9,
+			NULL);
+
+	gdouble new_value = CLAMP(old_value, 0, new_upper - view_height);
+	a_log_error("new_value=%d, old_value=%d", (int) new_value, (int) old_value);
+	if (new_value != old_value) {
+		gtk_adjustment_set_value (priv->vadjustment, new_value);
+	}
 }
 
 
 
-//static void l_hadjustment_value_changed(GtkAdjustment *adjustment, BuzEditor *editor) {
+static void l_hadjustment_value_changed(GtkAdjustment *adjustment, BuzEditor *editor) {
 //	BuzEditorPrivate *priv = buz_editor_get_instance_private(editor);
 //	glong aval = (glong) gtk_adjustment_get_value(adjustment);
 //	glong old = cha_document_view_set_view_x(priv->document_view, aval);
@@ -189,22 +191,22 @@ static void l_set_vadjustment_values(BuzEditor *editor) {
 //		gdk_window_scroll(window, dx, 0);
 //		gdk_window_process_updates(window, TRUE);
 //	}
-//}
+}
 
 
-//static void l_vadjustment_value_changed(GtkAdjustment *adjustment, BuzEditor *editor) {
-//	BuzEditorPrivate *priv = buz_editor_get_instance_private(editor);
-//	glong aval = (glong) gtk_adjustment_get_value(adjustment);
-//
-////	int s = (int) (aval % priv->font_height);
-////	if (s>priv->font_height/2) {
-////		s -= priv->font_height;
-////	}
-////	aval = aval - s;
-//
-//	glong old = cha_document_view_set_view_y(priv->document_view, aval);
+static void l_vadjustment_value_changed(GtkAdjustment *adjustment, BuzEditor *editor) {
+	BuzEditorPrivate *priv = buz_editor_get_instance_private(editor);
+	glong aval = (glong) gtk_adjustment_get_value(adjustment);
+
+//	int s = (int) (aval % priv->font_height);
+//	if (s>priv->font_height/2) {
+//		s -= priv->font_height;
+//	}
+//	aval = aval - s;
+
+	glong old = buz_editor_view_set_view_y(priv->editor_view, aval);
 //    glong dy = old - aval;
-//    cat_log_debug("scroll-v:%d, %d", (int) dy, aval);
+//    a_log_debug("scroll-v:%d, %d", (int) dy, aval);
 //
 //    if (priv->depreacated_scrolling) {
 //    	l_deprecated_scroll(editor, 0, dy);
@@ -218,58 +220,58 @@ static void l_set_vadjustment_values(BuzEditor *editor) {
 //		gdk_window_process_updates(window, TRUE);
 //		cha_document_view_set_in_scroll(priv->document_view, FALSE);
 //    }
-//}
+}
 
 
 static void l_set_hadjustment(BuzEditor *editor, GtkAdjustment *adjustment) {
-//	BuzEditorPrivate *priv = buz_editor_get_instance_private(editor);
-//
-//	if (adjustment && priv->hadjustment == adjustment) {
-//	    return;
-//	}
-//
-//	if (priv->hadjustment != NULL) {
-//		g_signal_handlers_disconnect_by_func(priv->hadjustment, l_hadjustment_value_changed, editor);
-//		g_object_unref(priv->hadjustment);
-//	}
-//
-//	if (adjustment == NULL) {
-//	    adjustment = gtk_adjustment_new(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
-//	}
-//
-//	g_signal_connect(adjustment, "value-changed", G_CALLBACK(l_hadjustment_value_changed), editor);
-//	priv->hadjustment = cat_ref_sink_ptr(adjustment);
-//	if (priv->document_view) {
-//		cha_document_view_set_adjustments(priv->document_view, priv->hadjustment, priv->vadjustment);
-//	}
-//	l_set_hadjustment_values(editor);
-//	g_object_notify(G_OBJECT(editor), "hadjustment");
+	BuzEditorPrivate *priv = buz_editor_get_instance_private(editor);
+
+	if (adjustment && priv->hadjustment == adjustment) {
+	    return;
+	}
+
+	if (priv->hadjustment != NULL) {
+		g_signal_handlers_disconnect_by_func(priv->hadjustment, l_hadjustment_value_changed, editor);
+		g_object_unref(priv->hadjustment);
+	}
+
+	if (adjustment == NULL) {
+	    adjustment = gtk_adjustment_new(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+	}
+
+	g_signal_connect(adjustment, "value-changed", G_CALLBACK(l_hadjustment_value_changed), editor);
+	priv->hadjustment = a_ref(adjustment);
+	if (priv->editor_view) {
+		buz_editor_view_set_adjustments(priv->editor_view, priv->hadjustment, priv->vadjustment);
+	}
+	l_set_hadjustment_values(editor);
+	g_object_notify(G_OBJECT(editor), "hadjustment");
 }
 
 
 static void l_set_vadjustment(BuzEditor *editor, GtkAdjustment *adjustment) {
-//	BuzEditorPrivate *priv = buz_editor_get_instance_private(editor);
-//
-//	if (adjustment && priv->vadjustment == adjustment) {
-//	    return;
-//	}
-//
-//	if (priv->vadjustment != NULL) {
-//		g_signal_handlers_disconnect_by_func(priv->vadjustment, l_vadjustment_value_changed, editor);
-//		g_object_unref(priv->vadjustment);
-//	}
-//
-//	if (adjustment == NULL) {
-//	    adjustment = gtk_adjustment_new(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
-//	}
-//
-//	g_signal_connect(adjustment, "value-changed", G_CALLBACK(l_vadjustment_value_changed), editor);
-//	priv->vadjustment = cat_ref_sink_ptr(adjustment);
-//	if (priv->document_view) {
-//		cha_document_view_set_adjustments(priv->document_view, priv->hadjustment, priv->vadjustment);
-//	}
-//	l_set_vadjustment_values(editor);
-//	g_object_notify(G_OBJECT(editor), "vadjustment");
+	BuzEditorPrivate *priv = buz_editor_get_instance_private(editor);
+
+	if (adjustment && priv->vadjustment == adjustment) {
+	    return;
+	}
+
+	if (priv->vadjustment != NULL) {
+		g_signal_handlers_disconnect_by_func(priv->vadjustment, l_vadjustment_value_changed, editor);
+		g_object_unref(priv->vadjustment);
+	}
+
+	if (adjustment == NULL) {
+	    adjustment = gtk_adjustment_new(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+	}
+
+	g_signal_connect(adjustment, "value-changed", G_CALLBACK(l_vadjustment_value_changed), editor);
+	priv->vadjustment = a_ref(adjustment);
+	if (priv->editor_view) {
+		buz_editor_view_set_adjustments(priv->editor_view, priv->hadjustment, priv->vadjustment);
+	}
+	l_set_vadjustment_values(editor);
+	g_object_notify(G_OBJECT(editor), "vadjustment");
 }
 
 
@@ -373,7 +375,7 @@ static void l_widget_realize(GtkWidget *widget) {
 //		if (priv->a_preferences) {
 //			cha_document_view_set_preferences(priv->document_view, priv->a_preferences);
 //		}
-//		cha_document_view_set_adjustments(priv->document_view, priv->hadjustment, priv->vadjustment);
+		buz_editor_view_set_adjustments(priv->editor_view, priv->hadjustment, priv->vadjustment);
 		a_unref(buz_view);
 	}
 //

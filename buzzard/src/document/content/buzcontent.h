@@ -63,6 +63,7 @@ GType buz_content_get_type();
 
 BuzContent *buz_content_new();
 
+int buz_content_page_count(BuzContentShady *content);
 AIterator *buz_content_page_iterator(BuzContentShady *content);
 
 BuzRowLocation buz_content_page_at_row(BuzContentShady *content, long long row);
