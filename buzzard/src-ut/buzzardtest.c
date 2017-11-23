@@ -79,7 +79,9 @@ int main(int argc, char **argv) {
 	gtk_container_add((GtkContainer *) scrolled_window, (GtkWidget *) buz_editor);
 
 
-	GFile *file = g_file_new_for_path("/home/superman/cpp-workspace/natpad/chameleon/src/layout/chadocumentview.c");
+//	GFile *file = g_file_new_for_path("/home/superman/cpp-workspace/natpad/chameleon/src/layout/chadocumentview.c");
+	GFile *file = g_file_new_for_path("/home/superman/cpp-workspace/ten/buzzard/src/view/buzeditorview.c");
+
 //	buz_document_open(document, file);
 
 	BuzDocumentLoader *loader = buz_document_loader_new();

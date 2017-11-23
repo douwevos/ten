@@ -75,10 +75,32 @@ BuzTextLineLayout *buz_text_line_layout_new(PangoLayoutLine *layout_line) {
 	return result;
 }
 
+gboolean buz_text_line_layout_same_row(BuzTextLineLayout *line_layout, BuzTextLineLayout *other_line_layout) {
+	BuzTextLineLayoutPrivate *priv = buz_text_line_layout_get_instance_private(line_layout);
+	BuzTextLineLayoutPrivate *opriv = buz_text_line_layout_get_instance_private(other_line_layout);
+	return priv->layout_line->layout==opriv->layout_line->layout;
+}
+
+
 const BuzSize buz_text_line_layout_get_size(BuzTextLineLayout *line_layout) {
 	BuzTextLineLayoutPrivate *priv = buz_text_line_layout_get_instance_private(line_layout);
 	return priv->size;
 }
+
+int buz_text_line_layout_view_x_at(BuzTextLineLayout *line_layout, int byte_index) {
+	BuzTextLineLayoutPrivate *priv = buz_text_line_layout_get_instance_private(line_layout);
+
+	int cursor_sub_line_idx = 0;
+	int cursor_xpos = 0;
+	pango_layout_index_to_line_x(priv->layout_line->layout, byte_index, FALSE, &cursor_sub_line_idx, &cursor_xpos);
+
+	PangoLayoutLine *ll = pango_layout_get_line_readonly(priv->layout_line->layout, cursor_sub_line_idx);
+	if (ll==priv->layout_line) {
+		return cursor_xpos;
+	}
+	return -1;
+}
+
 
 int buz_text_line_layout_show(BuzTextLineLayout *line_layout, cairo_t *cr) {
 	BuzTextLineLayoutPrivate *priv = buz_text_line_layout_get_instance_private(line_layout);
@@ -87,4 +109,3 @@ int buz_text_line_layout_show(BuzTextLineLayout *line_layout, cairo_t *cr) {
 	pango_cairo_show_layout_line(cr, priv->layout_line);
 	return priv->size.height;
 }
-

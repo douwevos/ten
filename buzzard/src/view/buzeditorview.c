@@ -107,6 +107,9 @@ void buz_editor_view_set_adjustments(BuzEditorView *editor_view, GtkAdjustment *
 }
 
 gboolean buz_editor_view_key_pressed(BuzEditorView *editor_view, GdkEventKey *event) {
+	if (event->string==NULL || *event->string==0) {
+		return FALSE;
+	}
 	BuzEditorViewPrivate *priv = buz_editor_view_get_instance_private(editor_view);
 	BuzRevisionAnchored *revision_anc = buz_document_get_revision_ref(priv->document);
 	a_log_debug("hitting key:%s, revision-in=%o", event->string, revision_anc);
@@ -181,24 +184,73 @@ void buz_editor_view_draw(BuzEditorView *editor_view, cairo_t *cr) {
 		}
 	}
 
+	BuzRevisionAnchored *revision = buz_document_get_revision_ref(priv->document);
+	AArrayAnchored *cursors = buz_revision_get_cursors(revision);
 
 	long long first_line_y_view = 0;
-	AArray *lines = buz_view_get_lines(priv->view, &first_line_y_view);
+	long long first_line_row = 0;
+	AArray *lines = buz_view_get_lines(priv->view, &first_line_y_view, &first_line_row);
 
 	if (lines) {
-		long long view_y = top-first_line_y_view;
+		long long view_y = first_line_y_view-top;
+		long long row_number = first_line_row;
 		AIterator *lines_iter = a_array_iterator(lines);
+		BuzTextLineLayout *prev_line = NULL;
 		BuzTextLineLayout *line = NULL;
-		while(a_iterator_next(lines_iter, &line)) {
+		while(a_iterator_next(lines_iter, (gconstpointer *) &line)) {
+			if (prev_line) {
+				if (!buz_text_line_layout_same_row(line, prev_line)) {
+					row_number++;
+				}
+			}
+			prev_line = line;
+
 			cairo_move_to(cr, 0, view_y);
 			int height = buz_text_line_layout_show(line, cr);
+
+			if (cursors) {
+				AIterator *cursor_iter = a_array_iterator(cursors);
+				BuzCursor *cursor = NULL;
+				while(a_iterator_next(cursor_iter, (gconstpointer *) &cursor)) {
+					long long cursor_row = buz_cursor_get_row(cursor);
+					a_log_error("cursor_row=%d, row_number=%d",cursor_row, row_number)
+					if (cursor_row==row_number) {
+						int column = buz_cursor_get_column(cursor);
+						int cur_view_x = buz_text_line_layout_view_x_at(line, column);
+						a_log_error("cur_view_x=%d, column=%d",cur_view_x, column)
+						if (cur_view_x>=0) {
+							cairo_save(cr);
+							cairo_set_operator(cr, CAIRO_OPERATOR_DIFFERENCE);
+							cairo_set_source_rgba(cr, 1.0, 1.0, 1.0, 1.0);
+							cairo_set_line_width(cr, 0.5);
+							int text_left = 0;
+//							int text_left = height;
+//							if (priv->line_nr_view_width>0) {
+//								text_left += priv->line_nr_view_width;
+//							}
+//							cairo_rectangle(cr, text_left, priv->last_drawn_ypos-2, priv->surface_width-text_left, height+4);
+//							cairo_clip(cr);
+
+							cairo_rectangle(cr, cur_view_x+text_left+0.5  /*- priv->view_x */, view_y+0.5, 1, height-1);
+							cairo_stroke(cr);
+
+							cairo_restore(cr);
+						}
+					}
+				}
+				a_unref(cursor_iter);
+
+			}
+
 			a_log_debug("height=%d, y=%ld", height, view_y)
 			view_y += height;
+
 		}
-		a_unref(lines);
+		a_unref(lines_iter);
 	}
 
 
+	a_unref(revision);
 //	buz_view_line_at
 
 //

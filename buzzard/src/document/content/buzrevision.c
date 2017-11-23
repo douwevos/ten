@@ -120,6 +120,12 @@ void buz_revision_set_page_at(BuzRevision *revision, BuzPageShady *page, int pag
 	buz_content_set_page_at(content, page, page_index);
 }
 
+AArrayAnchored *buz_revision_get_cursors(BuzRevisionShady *revision) {
+	AContext *context = (AContext *) a_alt_object_private(revision)->context;
+	return context->cursors;
+}
+
+
 int buz_revision_page_count(BuzRevisionShady *revision) {
 	AContext *context = (AContext *) a_alt_object_private(revision)->context;
 	return buz_content_page_count(context->content);
