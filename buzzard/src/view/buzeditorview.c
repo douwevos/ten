@@ -41,6 +41,7 @@ struct _BuzEditorViewPrivate {
 	GtkAdjustment *vadjustment;
 	long long last_layout_height;
 
+	int view_x_cursor;
 };
 
 static void l_document_listener_iface_init(BuzDocumentListenerInterface *iface);
@@ -107,10 +108,43 @@ void buz_editor_view_set_adjustments(BuzEditorView *editor_view, GtkAdjustment *
 }
 
 gboolean buz_editor_view_key_pressed(BuzEditorView *editor_view, GdkEventKey *event) {
+	BuzEditorViewPrivate *priv = buz_editor_view_get_instance_private(editor_view);
+	int key_val = event->keyval;
+
+	gboolean shift_pressed = event->state & GDK_SHIFT_MASK;
+	gboolean ctrl_pressed = event->state & GDK_CONTROL_MASK;
+	gboolean mod1_pressed = event->state & GDK_MOD1_MASK;
+	gboolean mod5_pressed = event->state & GDK_MOD5_MASK;
+	gboolean alt_pressed = (mod1_pressed || mod5_pressed) ? TRUE : FALSE;
+
+	a_log_error("hitting key:%d", key_val);
+
+	switch (key_val) {
+		case GDK_KEY_Left : {
+			priv->view_x_cursor = buz_view_move_cursor_left_or_right(priv->view, FALSE, ctrl_pressed);
+//			uow = (ChaUow *) cha_uow_move_cursor_new(ctrl_pressed ? CHA_MOVE_CURSOR_NEXT_COLUMN_WORD : CHA_MOVE_CURSOR_NEXT_COLUMN, shift_pressed, alt_pressed);
+			return FALSE;
+		} break;
+		case GDK_KEY_Right : {
+			priv->view_x_cursor = buz_view_move_cursor_left_or_right(priv->view, TRUE, ctrl_pressed);
+//			uow = (ChaUow *) cha_uow_move_cursor_new(ctrl_pressed ? CHA_MOVE_CURSOR_NEXT_COLUMN_WORD : CHA_MOVE_CURSOR_NEXT_COLUMN, shift_pressed, alt_pressed);
+			return FALSE;
+		} break;
+		case GDK_KEY_Up : {
+			buz_view_move_cursor_up_or_down(priv->view, priv->view_x_cursor, FALSE);
+			return FALSE;
+		} break;
+		case GDK_KEY_Down : {
+			buz_view_move_cursor_up_or_down(priv->view, priv->view_x_cursor, TRUE);
+			return FALSE;
+		} break;
+	}
+
 	if (event->string==NULL || *event->string==0) {
 		return FALSE;
 	}
-	BuzEditorViewPrivate *priv = buz_editor_view_get_instance_private(editor_view);
+
+
 	BuzRevisionAnchored *revision_anc = buz_document_get_revision_ref(priv->document);
 	a_log_debug("hitting key:%s, revision-in=%o", event->string, revision_anc);
 	BuzRevision *revision = buz_revision_mutable(revision_anc);
@@ -191,6 +225,7 @@ void buz_editor_view_draw(BuzEditorView *editor_view, cairo_t *cr) {
 	long long first_line_row = 0;
 	AArray *lines = buz_view_get_lines(priv->view, &first_line_y_view, &first_line_row);
 
+
 	if (lines) {
 		long long view_y = first_line_y_view-top;
 		long long row_number = first_line_row;
@@ -206,18 +241,18 @@ void buz_editor_view_draw(BuzEditorView *editor_view, cairo_t *cr) {
 			prev_line = line;
 
 			cairo_move_to(cr, 0, view_y);
-			int height = buz_text_line_layout_show(line, cr);
+			int height = buz_text_line_layout_show(line, cr, view_dimensions.left, view_dimensions.width);
 
 			if (cursors) {
 				AIterator *cursor_iter = a_array_iterator(cursors);
 				BuzCursor *cursor = NULL;
 				while(a_iterator_next(cursor_iter, (gconstpointer *) &cursor)) {
-					long long cursor_row = buz_cursor_get_row(cursor);
-					a_log_error("cursor_row=%d, row_number=%d",cursor_row, row_number)
+					long long cursor_row = buz_cursor_row(cursor);
+					a_log_debug("cursor_row=%d, row_number=%d",cursor_row, row_number)
 					if (cursor_row==row_number) {
-						int column = buz_cursor_get_column(cursor);
+						int column = buz_cursor_x_bytes(cursor);
 						int cur_view_x = buz_text_line_layout_view_x_at(line, column);
-						a_log_error("cur_view_x=%d, column=%d",cur_view_x, column)
+						a_log_debug("cur_view_x=%d, column=%d",cur_view_x, column)
 						if (cur_view_x>=0) {
 							cairo_save(cr);
 							cairo_set_operator(cr, CAIRO_OPERATOR_DIFFERENCE);

@@ -150,6 +150,234 @@ int buz_view_get_layout_width(BuzView *view) {
 	return priv->layout_width;
 }
 
+int buz_view_move_cursor_left_or_right(BuzView *view, gboolean move_right, gboolean per_word) {
+	BuzViewPrivate *priv = buz_view_get_instance_private(view);
+	int result = -1;
+
+	BuzRevisionAnchored *revision_anc = buz_document_get_revision_ref(priv->document);
+	BuzRevision *revision = buz_revision_mutable(revision_anc);
+	BuzContentShady *content = buz_revision_get_content(revision);
+
+	AArray *cursors = (AArray *) buz_revision_get_cursors(revision);
+	BuzCursorAnchored *cursor = (BuzCursorAnchored *) a_array_first(cursors);
+	a_log_error("move cursor:revision-anc=%o, cursor=%o", revision_anc, cursor);
+	long long cursor_row = buz_cursor_row(cursor);
+
+	BuzRowLocation row_location = buz_content_page_at_row(content, cursor_row);
+	BuzCursorMove cursor_move = move_right ? BUZ_CURSOR_MOVE_ONE_CHAR_RIGHT : BUZ_CURSOR_MOVE_ONE_CHAR_LEFT;
+	BuzCursor *new_cursor = buz_cursor_mutable(cursor);
+
+
+	BuzTextLayout *text_layout = NULL;
+
+	gboolean do_run = TRUE;
+	while(do_run) {
+		do_run = FALSE;
+		BuzPageShady *page = buz_content_page_at(content, row_location.page_index);
+		if (BUZ_IS_MATERIALIZED_PAGE(page)) {
+			BuzMaterializedPageShady *mat_page = (BuzMaterializedPageShady *) page;
+			BuzRow *row = buz_materialized_page_row_at(mat_page, row_location.page_row_index);
+			BuzLineView *line_view = (BuzLineView *) buz_row_get_slot_content_ref(row, &priv->view_slot);
+			if (line_view == NULL) {
+				line_view = buz_line_view_new();
+				buz_row_set_slot_content(row, &priv->view_slot, (GObject *) line_view);
+			}
+			AStringShady *text = buz_row_text(row);
+			buz_line_view_update(line_view, priv->layout_context, text);
+			text_layout = buz_line_view_get_text_layout(line_view);
+
+			if (cursor_move==BUZ_CURSOR_MOVE_TO_BEGIN_OF_LINE) {
+				buz_cursor_set_x(new_cursor, a_string_length(text), 0);
+			} else if (cursor_move==BUZ_CURSOR_MOVE_TO_END_OF_LINE) {
+				buz_cursor_set_x(new_cursor, 0, 0);
+			}
+
+			a_log_error("new_cursor=%O, cursor=%O", new_cursor, cursor);
+			buz_text_layout_move_cursor(text_layout, new_cursor, cursor_move, 0);
+
+			if (buz_cursor_equal(new_cursor, cursor)) {
+				cursor_move = BUZ_CURSOR_MOVE_TO_BEGIN_OF_LINE;
+				if (move_right) {
+					if (row_location.page_row_index<buz_page_row_count(page)-1) {
+						row_location.page_row_index++;
+						cursor_row++;
+					} else if (row_location.page_index<buz_content_page_count(content)-1) {
+						row_location.page_index++;
+						row_location.page_row_index = 0;
+						cursor_row++;
+					}
+				} else {
+					cursor_move = BUZ_CURSOR_MOVE_TO_END_OF_LINE;
+					if (row_location.page_row_index>0) {
+						row_location.page_row_index--;
+						cursor_row--;
+					} else if (row_location.page_index>0) {
+						row_location.page_index--;
+						BuzPageShady *page = buz_content_page_at(content, row_location.page_index);
+						row_location.page_row_index = buz_page_row_count(page)-1;
+						cursor_row--;
+					}
+				}
+				if (buz_cursor_row(cursor)!=cursor_row) {
+					buz_cursor_set_row(new_cursor, cursor_row);
+					do_run = TRUE;
+				}
+			}
+		}
+	}
+
+	if (text_layout) {
+		BuzTextLineLayout *line_layout = buz_text_layout_line_at_x_byte(text_layout, buz_cursor_x_bytes(new_cursor));
+		result = buz_text_line_layout_view_x_at(line_layout, buz_cursor_x_bytes(new_cursor));
+	}
+
+	a_log_error("new_cursor=%o", new_cursor);
+	a_array_set_at(cursors, new_cursor, 0);
+	buz_document_post_revision(priv->document, revision);
+	a_unref(revision_anc);
+	return result;
+}
+
+
+void buz_view_move_cursor_up_or_down(BuzView *view, int view_x_cursor, gboolean down) {
+	BuzViewPrivate *priv = buz_view_get_instance_private(view);
+	int result = -1;
+
+	BuzRevisionAnchored *revision_anc = buz_document_get_revision_ref(priv->document);
+	BuzContentShady *content = buz_revision_get_content(revision_anc);
+
+	AArray *cursors = (AArray *) buz_revision_get_cursors(revision_anc);
+	BuzCursorAnchored *cursor = (BuzCursorAnchored *) a_array_first(cursors);
+	a_log_error("move cursor:revision-anc=%o, cursor=%o", revision_anc, cursor);
+	long long cursor_row = buz_cursor_row(cursor);
+
+	BuzRowLocation row_location = buz_content_page_at_row(content, cursor_row);
+	BuzCursor *new_cursor = buz_cursor_mutable(cursor);
+	BuzCursorMove cursor_move = down ? BUZ_CURSOR_MOVE_ONE_LINE_DOWN : BUZ_CURSOR_MOVE_ONE_LINE_UP;
+
+	BuzTextLayout *text_layout = NULL;
+
+	gboolean do_run = TRUE;
+	while(do_run) {
+		do_run = FALSE;
+		BuzPageShady *page = buz_content_page_at(content, row_location.page_index);
+		if (BUZ_IS_MATERIALIZED_PAGE(page)) {
+			BuzMaterializedPageShady *mat_page = (BuzMaterializedPageShady *) page;
+			BuzRow *row = buz_materialized_page_row_at(mat_page, row_location.page_row_index);
+			BuzLineView *line_view = (BuzLineView *) buz_row_get_slot_content_ref(row, &priv->view_slot);
+			if (line_view == NULL) {
+				line_view = buz_line_view_new();
+				buz_row_set_slot_content(row, &priv->view_slot, (GObject *) line_view);
+			}
+			AStringShady *text = buz_row_text(row);
+			buz_line_view_update(line_view, priv->layout_context, text);
+			text_layout = buz_line_view_get_text_layout(line_view);
+
+			if (cursor_move == BUZ_CURSOR_MOVE_TO_LAST_X_CURSOR) {
+				if (down) {
+					buz_cursor_set_x(new_cursor, 0, 0);
+				} else {
+					buz_cursor_set_x(new_cursor, a_string_length(text), 0);
+				}
+			}
+
+			a_log_error("new_cursor=%O, cursor=%O, view_x_cursor=%d", new_cursor, cursor, view_x_cursor);
+			buz_text_layout_move_cursor(text_layout, new_cursor, cursor_move, view_x_cursor);
+
+			if (buz_cursor_equal(new_cursor, cursor)) {
+				cursor_move = BUZ_CURSOR_MOVE_TO_LAST_X_CURSOR;
+				if (down) {
+					if (row_location.page_row_index<buz_page_row_count(page)-1) {
+						row_location.page_row_index++;
+						cursor_row++;
+					} else if (row_location.page_index<buz_content_page_count(content)-1) {
+						row_location.page_index++;
+						row_location.page_row_index = 0;
+						cursor_row++;
+					}
+				} else {
+					if (row_location.page_row_index>0) {
+						row_location.page_row_index--;
+						cursor_row--;
+					} else if (row_location.page_index>0) {
+						row_location.page_index--;
+						BuzPageShady *page = buz_content_page_at(content, row_location.page_index);
+						row_location.page_row_index = buz_page_row_count(page)-1;
+						cursor_row--;
+					}
+				}
+				if (buz_cursor_row(cursor)!=cursor_row) {
+					buz_cursor_set_row(new_cursor, cursor_row);
+					do_run = TRUE;
+				}
+			}
+		}
+	}
+
+	if (text_layout) {
+		BuzTextLineLayout *line_layout = buz_text_layout_line_at_x_byte(text_layout, buz_cursor_x_bytes(new_cursor));
+		result = buz_text_line_layout_view_x_at(line_layout, buz_cursor_x_bytes(new_cursor));
+	}
+
+	BuzRevision *revision = buz_revision_mutable(revision_anc);
+	cursors = (AArray *) buz_revision_get_cursors(revision);
+
+	a_log_error("new_cursor=%o", new_cursor);
+	a_array_set_at(cursors, new_cursor, 0);
+	buz_document_post_revision(priv->document, revision);
+	a_unref(revision_anc);
+
+}
+
+//void buz_view_move_cursor_up(BuzView *view) {
+//	BuzViewPrivate *priv = buz_view_get_instance_private(view);
+//
+//	BuzRevisionAnchored *revision_anc = buz_document_get_revision_ref(priv->document);
+//	BuzRevision *revision = buz_revision_mutable(revision_anc);
+//	BuzContentShady *content = buz_revision_get_content(revision);
+//
+//	AArray *cursors = (AArray *) buz_revision_get_cursors(revision);
+//	BuzCursorAnchored *cursor = (BuzCursorAnchored *) a_array_first(cursors);
+//	a_log_error("move cursor:revision-anc=%o, cursor=%o", revision_anc, cursor);
+//	long long row = buz_cursor_row(cursor);
+//
+//	BuzRowLocation row_location = buz_content_page_at_row(content, row);
+//	BuzPageShady *page = buz_content_page_at(content, row_location.page_index);
+//
+//	if (BUZ_IS_MATERIALIZED_PAGE(page)) {
+//		BuzMaterializedPageShady *mat_page = (BuzMaterializedPageShady *) page;
+//		BuzRow *row = buz_materialized_page_row_at(mat_page, row_location.page_row_index);
+//		BuzLineView *line_view = (BuzLineView *) buz_row_get_slot_content_ref(row, &priv->view_slot);
+//		if (line_view == NULL) {
+//			line_view = buz_line_view_new();
+//			buz_row_set_slot_content(row, &priv->view_slot, (GObject *) line_view);
+//		}
+//		AStringShady *text = buz_row_text(row);
+//		buz_line_view_update(line_view, priv->layout_context, text);
+//		BuzTextLayout *text_layout = buz_line_view_get_text_layout(line_view);
+//
+//
+//		BuzCursor *new_cursor = buz_cursor_mutable(cursor);
+//		a_log_error("new_cursor=%O, cursor=%O", new_cursor, cursor);
+//		buz_text_layout_move_cursor(text_layout, new_cursor, BUZ_CURSOR_MOVE_ONE_CHAR_RIGHT);
+//
+//		if (buz_cursor_equal(new_cursor, cursor)) {
+//			if ((row_location.page_row_index<buz_page_row_count(page)-1) || (row_location.page_index<buz_content_page_count(content)-1)) {
+//				a_unref(new_cursor);
+//				new_cursor = buz_cursor_new(buz_cursor_row(cursor)+1, 0);
+//			}
+//		}
+//
+//		a_log_error("new_cursor=%o", new_cursor);
+//		a_array_set_at(cursors, new_cursor, 0);
+//	}
+//
+//	buz_document_post_revision(priv->document, revision);
+//	a_unref(revision_anc);
+//
+//}
+
+
 BuzPageView *l_create_page_view(BuzView *view, BuzPageAnchored *page) {
 	BuzViewPrivate *priv = buz_view_get_instance_private(view);
 	BuzPageView *result = buz_page_view_new();

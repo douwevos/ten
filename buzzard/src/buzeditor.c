@@ -59,6 +59,7 @@ static void l_widget_realize(GtkWidget *widget);
 static void l_widget_unrealize(GtkWidget *widget);
 static void l_widget_size_allocate(GtkWidget *widget, GtkAllocation *allocation);
 static gboolean l_widget_draw(GtkWidget *widget, cairo_t *cr);
+static gboolean l_widget_focus(GtkWidget *widget, GtkDirectionType direction);
 
 static void buz_editor_class_init(BuzEditorClass *clazz) {
 	GObjectClass *object_class = G_OBJECT_CLASS(clazz);
@@ -78,6 +79,7 @@ static void buz_editor_class_init(BuzEditorClass *clazz) {
 	widget_class->unrealize = l_widget_unrealize;
 	widget_class->size_allocate = l_widget_size_allocate;
 	widget_class->draw = l_widget_draw;
+	widget_class->focus = l_widget_focus;
 }
 
 static void buz_editor_init(BuzEditor *instance) {
@@ -108,12 +110,25 @@ void buz_editor_construct(BuzEditor *editor) {
 	priv->document = NULL;
 	GtkWidget *widget = GTK_WIDGET(editor);
 
+	gtk_widget_set_events(widget, gtk_widget_get_events(widget)
+	                                             | GDK_BUTTON_PRESS_MASK
+	                                             | GDK_BUTTON2_MASK
+	                                             | GDK_BUTTON3_MASK
+	                                             | GDK_BUTTON4_MASK
+	                                             | GDK_BUTTON5_MASK
+	                                             | GDK_BUTTON_RELEASE_MASK
+	                                             | GDK_POINTER_MOTION_MASK
+	                                             | GDK_POINTER_MOTION_HINT_MASK
+	                                             | GDK_BUTTON_RELEASE_MASK
+	                                             | GDK_KEY_PRESS_MASK
+	                                             | GDK_SCROLL_MASK
+	                                             );
+
 	g_signal_connect(editor, "key-press-event", G_CALLBACK(l_key_press_event), editor);
 
 	gtk_widget_set_app_paintable(widget, TRUE);
 	gtk_widget_set_can_focus(widget, TRUE);
 	gtk_widget_show(widget);
-
 }
 
 BuzEditor *buz_editor_new(BuzDocument *document) {
@@ -431,4 +446,9 @@ static gboolean l_widget_draw(GtkWidget *widget, cairo_t *cr) {
 //	cairo_stroke(cr);
 	buz_editor_view_draw(priv->editor_view, cr);
 	return FALSE;
+}
+
+static gboolean l_widget_focus(GtkWidget *widget, GtkDirectionType direction) {
+	gtk_widget_grab_focus(widget);
+	return TRUE;
 }
