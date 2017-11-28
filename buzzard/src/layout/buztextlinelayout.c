@@ -22,7 +22,7 @@
 
 #include "buztextlinelayout.h"
 
-#define A_LOG_LEVEL A_LOG_ALL
+#define A_LOG_LEVEL A_LOG_WARN
 #define A_LOG_CLASS "BuzTextLineLayout"
 #include <asupport.h>
 
@@ -96,14 +96,25 @@ int buz_text_line_layout_view_x_at(BuzTextLineLayout *line_layout, int byte_inde
 
 	PangoLayoutLine *ll = pango_layout_get_line_readonly(priv->layout_line->layout, cursor_sub_line_idx);
 	if (ll==priv->layout_line) {
-		return cursor_xpos;
+		return (cursor_xpos+PANGO_SCALE/2)/PANGO_SCALE;
 	}
 	return -1;
 }
 
 
-int buz_text_line_layout_show(BuzTextLineLayout *line_layout, cairo_t *cr) {
+int buz_text_line_layout_show(BuzTextLineLayout *line_layout, cairo_t *cr, int view_left, int view_width) {
 	BuzTextLineLayoutPrivate *priv = buz_text_line_layout_get_instance_private(line_layout);
+	if (priv->size.height>0 && view_width>0) {
+		a_log_debug("view_width=%d, priv->size.height=%d", view_width, priv->size.height);
+		double xp, yp;
+		cairo_get_current_point(cr, &xp, &yp);
+		cairo_set_source_rgb(cr, 0.9,0.9,0.9);
+		cairo_rectangle(cr, xp, yp, view_width, priv->size.height);
+		cairo_fill(cr);
+		cairo_move_to(cr, xp, yp);
+	}
+
+	cairo_set_source_rgb(cr, 0.0,0.0,0.0);
 	int baseline = (pango_layout_get_baseline(priv->layout_line->layout))/PANGO_SCALE;
 	cairo_rel_move_to(cr,0, baseline);
 	pango_cairo_show_layout_line(cr, priv->layout_line);

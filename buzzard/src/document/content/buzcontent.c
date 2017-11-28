@@ -126,6 +126,11 @@ BuzRowLocation buz_content_page_at_row(BuzContentShady *content, long long row) 
 	return result;
 }
 
+BuzPageShady *buz_content_page_at(BuzContentShady *content, int page_index) {
+	AContext *context = (AContext *) a_alt_object_private(content)->context;
+	return (BuzPageShady *) a_array_at((AArray *) context->pages, page_index);
+}
+
 void buz_content_set_page_at(BuzContent *content, BuzPageShady *page, int page_index) {
 	AContext *context = (AContext *) a_alt_object_private(content)->context;
 	a_log_debug("set page:content=%o, pages=%o", content, context->pages);
@@ -151,7 +156,7 @@ BuzMaterializedPage *buz_content_editable_page_at(BuzContent *content, int page_
 
 void buz_content_insert(BuzContent *content, AStringShady *txt, BuzCursorShady *cursor) {
 //	AContext *context = (AContext *) a_alt_object_private(content)->context;
-	long long row = buz_cursor_get_row(cursor);
+	long long row = buz_cursor_row(cursor);
 	BuzRowLocation row_location = buz_content_page_at_row(content, row);
 	a_log_debug("insert text:%O at cursor:%O, page_idx=%d", txt, cursor, row_location.page_index);
 	if (row_location.page_index>=0) {

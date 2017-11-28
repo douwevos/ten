@@ -103,6 +103,7 @@ struct _AAltObjectContext {
 
 struct _AAltObjectEditor {
 	const AAltObject *origin;
+	AAltObjectContext *origin_context_ptr;
 };
 
 

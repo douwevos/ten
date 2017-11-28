@@ -116,6 +116,141 @@ void buz_text_layout_set_text(BuzTextLayout *layout, AStringShady *text) {
 	}
 }
 
+void buz_text_layout_move_cursor(BuzTextLayout *layout, BuzCursor *cursor, BuzCursorMove cursor_move, int last_x_cursor) {
+	BuzTextLayoutPrivate *priv = buz_text_layout_get_instance_private(layout);
+	last_x_cursor = last_x_cursor*PANGO_SCALE;
+	gboolean limit_cursor = TRUE;
+	int x_sub = buz_cursor_x_sub(cursor);
+	int x_bytes = buz_cursor_x_bytes(cursor);
+	int x_bytes_next = x_bytes;
+	switch(cursor_move) {
+		case BUZ_CURSOR_MOVE_TO_END_OF_LINE : {
+			int sub_line;
+			pango_layout_index_to_line_x(priv->pango_layout, x_bytes_next, FALSE, &sub_line, NULL);
+			PangoLayoutLine *layout_line = pango_layout_get_line_readonly(priv->pango_layout, sub_line);
+			x_bytes_next = layout_line->start_index+layout_line->length;
+			x_sub = 0;
+		} break;
+		case BUZ_CURSOR_MOVE_TO_BEGIN_OF_LINE : {
+			int sub_line;
+			pango_layout_index_to_line_x(priv->pango_layout, x_bytes_next, FALSE, &sub_line, NULL);
+			PangoLayoutLine *layout_line = pango_layout_get_line_readonly(priv->pango_layout, sub_line);
+			x_bytes_next = layout_line->start_index;
+			x_sub = 0;
+		} break;
+		case BUZ_CURSOR_MOVE_ONE_CHAR_LEFT : {
+			int trailing;
+			pango_layout_move_cursor_visually(priv->pango_layout, TRUE, x_bytes, 0, -1, &x_bytes_next, &trailing);
+			if (x_bytes_next==x_bytes) {
+				x_bytes_next--;
+			}
+			if (x_bytes_next<0) {
+				if (limit_cursor) {
+					x_bytes_next = 0;
+				} else {
+					x_bytes_next = 0;
+				}
+			}
+		} break;
+		case BUZ_CURSOR_MOVE_ONE_CHAR_RIGHT : {
+			int trailing;
+			pango_layout_move_cursor_visually(priv->pango_layout, TRUE, x_bytes, 0, 1, &x_bytes_next, &trailing);
+			if (x_bytes_next==x_bytes) {
+				x_bytes_next++;
+			}
+			if (x_bytes_next>a_string_length(priv->text)) {
+				if (limit_cursor) {
+					x_bytes_next = a_string_length(priv->text);
+				} else {
+					x_bytes_next = a_string_length(priv->text);
+					x_sub++;
+				}
+			}
+		} break;
+		case BUZ_CURSOR_MOVE_ONE_LINE_UP : {
+			int sub_line;
+			pango_layout_index_to_line_x(priv->pango_layout, x_bytes_next, FALSE, &sub_line, NULL);
+			if (sub_line>0) {
+				sub_line--;
+				PangoLayoutLine *layout_line = pango_layout_get_line_readonly(priv->pango_layout, sub_line);
+
+
+				int trailing;
+				x_sub = 0;
+				if (!pango_layout_line_x_to_index(layout_line, last_x_cursor, &x_bytes_next, &trailing)) {
+					x_bytes_next = layout_line->start_index+layout_line->length;
+					if (!limit_cursor) {
+						int xpp = 0;
+						pango_layout_line_index_to_x(layout_line, x_bytes_next, TRUE, &xpp);
+						xpp = last_x_cursor - xpp;
+//						x_sub = (int) round(xpp/view_ctx.ps_space_width);
+//						if (x_sub<0) {
+//							x_sub = 0;
+//						}
+					}
+				} else {
+					x_bytes_next += trailing;
+				}
+
+			}
+
+		} break;
+		case BUZ_CURSOR_MOVE_ONE_LINE_DOWN : {
+			int sub_line;
+			pango_layout_index_to_line_x(priv->pango_layout, x_bytes_next, FALSE, &sub_line, NULL);
+			if (sub_line<pango_layout_get_line_count(priv->pango_layout)-1) {
+				sub_line++;
+				PangoLayoutLine *layout_line = pango_layout_get_line_readonly(priv->pango_layout, sub_line);
+
+
+				int trailing;
+				x_sub = 0;
+				if (!pango_layout_line_x_to_index(layout_line, last_x_cursor, &x_bytes_next, &trailing)) {
+					x_bytes_next = layout_line->start_index+layout_line->length;
+					if (!limit_cursor) {
+						int xpp = 0;
+						pango_layout_line_index_to_x(layout_line, x_bytes_next, TRUE, &xpp);
+						xpp = last_x_cursor - xpp;
+//						x_sub = (int) round(xpp/view_ctx.ps_space_width);
+//						if (x_sub<0) {
+//							x_sub = 0;
+//						}
+					}
+				} else {
+					x_bytes_next += trailing;
+				}
+
+			}
+
+		} break;
+		case BUZ_CURSOR_MOVE_TO_LAST_X_CURSOR : {
+			int sub_line;
+			pango_layout_index_to_line_x(priv->pango_layout, x_bytes_next, FALSE, &sub_line, NULL);
+			PangoLayoutLine *layout_line = pango_layout_get_line_readonly(priv->pango_layout, sub_line);
+			int trailing;
+			x_sub = 0;
+			if (!pango_layout_line_x_to_index(layout_line, last_x_cursor, &x_bytes_next, &trailing)) {
+				x_bytes_next = layout_line->start_index+layout_line->length;
+				if (!limit_cursor) {
+					int xpp = 0;
+					pango_layout_line_index_to_x(layout_line, x_bytes_next, TRUE, &xpp);
+					xpp = last_x_cursor - xpp;
+//						x_sub = (int) round(xpp/view_ctx.ps_space_width);
+//						if (x_sub<0) {
+//							x_sub = 0;
+//						}
+				}
+			} else {
+				x_bytes_next += trailing;
+			}
+
+		} break;
+	}
+
+	buz_cursor_set_x(cursor, x_bytes_next, x_sub);
+}
+
+
 void buz_text_layout_show(BuzTextLayout *layout, cairo_t *cairo) {
 	BuzTextLayoutPrivate *priv = buz_text_layout_get_instance_private(layout);
 	pango_cairo_show_layout(cairo, priv->pango_layout);
@@ -140,4 +275,11 @@ int buz_text_layout_line_count(BuzTextLayout *layout) {
 BuzTextLineLayout *buz_text_layout_line_at(BuzTextLayout *layout, int index) {
 	BuzTextLayoutPrivate *priv = buz_text_layout_get_instance_private(layout);
 	return (BuzTextLineLayout *) a_array_at(priv->lines, index);
+}
+
+BuzTextLineLayout *buz_text_layout_line_at_x_byte(BuzTextLayout *layout, int x_byte) {
+	BuzTextLayoutPrivate *priv = buz_text_layout_get_instance_private(layout);
+	int sub_line;
+	pango_layout_index_to_line_x(priv->pango_layout, x_byte, FALSE, &sub_line, NULL);
+	return (BuzTextLineLayout *) a_array_at(priv->lines, sub_line);
 }

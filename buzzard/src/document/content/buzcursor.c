@@ -30,7 +30,8 @@
 struct _AContext {
 	AAltObjectContext parent;
 	long long row;
-	int column;
+	int x_bytes;
+	int x_sub;
 };
 
 struct _AEditContext {
@@ -59,6 +60,7 @@ static void buz_cursor_class_init(BuzCursorClass *clazz) {
 	a_class->context_size = sizeof(AContext);
 	a_class->editor_size = sizeof(AEditContext);
 	a_class->cloneContext = l_a_clone;
+	a_class->clone_context_for_mutable = TRUE;
 }
 
 static void buz_cursor_init(BuzCursor *instance) {
@@ -70,40 +72,51 @@ static void l_dispose(GObject *object) {
 	a_log_detail("disposed:%p", object);
 }
 
-BuzCursor *buz_cursor_new(long long row, int column) {
+BuzCursor *buz_cursor_new(long long row, int x_bytes) {
 	BuzCursor *result = g_object_new(BUZ_TYPE_CURSOR, NULL);
 	a_alt_object_construct((AAltObject *) result, TRUE);
 	AContext *context = (AContext *) a_alt_object_private(result)->context;
 	context->row = row;
-	context->column = column;
+	context->x_bytes = x_bytes;
+	context->x_sub = 0;
 	return result;
 }
 
-long long buz_cursor_get_row(BuzCursorShady *cursor) {
+long long buz_cursor_row(BuzCursorShady *cursor) {
 	AContext *context = (AContext *) a_alt_object_private(cursor)->context;
 	return context->row;
 }
 
-int buz_cursor_get_column(BuzCursorShady *cursor) {
+int buz_cursor_x_bytes(BuzCursorShady *cursor) {
 	AContext *context = (AContext *) a_alt_object_private(cursor)->context;
-	return context->column;
+	return context->x_bytes;
+}
+
+int buz_cursor_x_sub(BuzCursorShady *cursor) {
+	AContext *context = (AContext *) a_alt_object_private(cursor)->context;
+	return context->x_sub;
+}
+
+void buz_cursor_set_x(BuzCursor *cursor, int x_bytes, int x_sub) {
+	AContext *context = (AContext *) a_alt_object_private(cursor)->context;
+	context->x_bytes = x_bytes;
+	context->x_sub = x_sub;
+}
+void buz_cursor_set_row(BuzCursor *cursor, long long row) {
+	AContext *context = (AContext *) a_alt_object_private(cursor)->context;
+	context->row = row;
 }
 
 
-BuzCursorAnchored *buz_cursor_anchor(BuzCursorShady *cursor) {
-	return (BuzCursorAnchored *) a_alt_object_anchor(cursor);
-}
-
-BuzCursor *buz_cursor_mutable(BuzCursorShady *cursor) {
-	return (BuzCursor *) a_alt_object_mutable(cursor);
-}
+A_ALT_C(BuzCursor, buz_cursor);
 
 
 static void l_a_clone(const AAltObjectContext *context_from, AAltObjectContext *context_to) {
 	const AContext *from = (const AContext *) context_from;
 	AContext *to = (AContext *) context_to;
-	to->column = from->column;
 	to->row = from->row;
+	to->x_bytes = from->x_bytes;
+	to->x_sub = from->x_sub;
 }
 
 static gboolean l_equal(const AObject *object_a, const AObject *object_b) {
@@ -120,11 +133,12 @@ static gboolean l_equal(const AObject *object_a, const AObject *object_b) {
 		return TRUE;
 	}
 
-	return (context_a->column==context_b->column) && (context_a->row==context_b->row);
+	return (context_a->x_bytes==context_b->x_bytes) && (context_a->x_sub==context_b->x_sub) && (context_a->row==context_b->row);
 }
 
 static void l_as_string(const AObject *object, struct _AString *out) {
-	AContext *context = (AContext *) a_alt_object_private(object)->context;
+	AAltObjectPrivate *priv = a_alt_object_private(object);
+	AContext *context = (AContext *) priv->context;
 	const char *name = g_type_name_from_instance((GTypeInstance *) object);
-	a_string_format(out, "%s[col=%d, row=%d]", name, context->column, context->row);
+	a_string_format(out, "%s<%s:%p>[%p: x=%d+%d, row=%d]", name, priv->editor ? "mut" : "anc", context, object, context->x_bytes, context->x_sub, context->row);
 }

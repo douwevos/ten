@@ -101,8 +101,8 @@ BuzRevisionAnchored *buz_document_get_revision_ref(BuzDocument *document) {
 void buz_document_post_revision(BuzDocument *document, BuzRevisionShady *revision) {
 	BuzDocumentPrivate *priv = buz_document_get_instance_private(document);
 	BuzRevisionAnchored *anchored = buz_revision_anchor(revision);
-	a_log_debug("anchored=%p", anchored);
 	BuzRevisionAnchored *last_revision = (BuzRevisionAnchored *) a_atomic_reference_get_unsafe(priv->revision_reference);
+	a_log_error("anchored=%p, revision=%p, last_revision=%p, rc=%d", anchored, revision, last_revision, ((GObject *) last_revision)->ref_count);
 	if (last_revision!=anchored) {
 		buz_revision_enrich(anchored, priv->enrichment_map);
 		buz_revision_impoverish(last_revision);

@@ -49,12 +49,13 @@ static void l_dispose(GObject *object) {
 	AAltObjectPrivate *priv = a_alt_object_get_instance_private((AAltObject *) object);
 	if (priv->editor) {
 		if (priv->editor->origin) {
-			AAltObjectPrivate *orgpriv = a_alt_object_get_instance_private((AAltObject *) priv->editor->origin);
-			if (priv->context==orgpriv->context) {
+			const AAltObject *origin = priv->editor->origin;
+			priv->editor->origin = NULL;
+			AAltObjectPrivate *orgpriv = a_alt_object_get_instance_private((AAltObject *) origin);
+			if (priv->context==priv->editor->origin_context_ptr) {
 				priv->context = NULL;
 			}
-			a_unref(priv->editor->origin);
-			priv->editor->origin = NULL;
+			a_unref(origin);
 		}
 	}
 
@@ -69,14 +70,16 @@ static void l_finalize(GObject *object) {
 	if (priv->context && orig_context!=priv->context) {
 
 		if (g_atomic_int_dec_and_test(&(priv->context->ref_count))) {
-			g_slice_free1(a_cls->context_size, priv->context);
+//			g_slice_free1(a_cls->context_size, priv->context);
+			g_free(priv->context);
 //			printf("a_alt_object_anchor: free context %p, orig_context=%p, editor=%p\n", priv->context, orig_context, priv->editor);
 			priv->context = NULL;
 		}
 	}
 
 	if (priv->editor) {
-		g_slice_free1(a_cls->editor_size, priv->editor);
+//		g_slice_free1(a_cls->editor_size, priv->editor);
+		g_free(priv->editor);
 		priv->editor = NULL;
 	}
 
@@ -87,9 +90,13 @@ static void l_finalize(GObject *object) {
 void a_alt_object_construct(AAltObject *object, gboolean mutable) {
 	AAltObjectPrivate *priv = a_alt_object_get_instance_private(object);
 	AAltObjectClass *a_cls = A_ALT_OBJECT_GET_CLASS(object);
-	priv->context = g_slice_alloc0(a_cls->context_size);
+//	priv->context = g_slice_alloc0(a_cls->context_size);
+	priv->context = g_malloc0(a_cls->context_size);
 	if (mutable) {
-		priv->editor = g_slice_alloc0(a_cls->editor_size);
+//		priv->editor = g_slice_alloc0(a_cls->editor_size);
+		priv->editor = g_malloc0(a_cls->editor_size);
+	} else {
+		priv->editor = NULL;
 	}
 	priv->context->ref_count = 1;
 	a_object_construct((AObject *) object);
@@ -101,7 +108,8 @@ AAltObjectPrivate *a_alt_object_private(gconstpointer object) {
 
 
 static AAltObjectContext *l_clone(AAltObjectClass *a_cls, const AAltObjectContext *context) {
-	AAltObjectContext *result = g_slice_alloc0(a_cls->context_size);
+//	AAltObjectContext *result = g_slice_alloc0(a_cls->context_size);
+	AAltObjectContext *result = g_malloc0(a_cls->context_size);
 	result->ref_count = 1;
 	if (a_cls->cloneContext) {
 		a_cls->cloneContext(context, result);
@@ -110,9 +118,8 @@ static AAltObjectContext *l_clone(AAltObjectClass *a_cls, const AAltObjectContex
 }
 
 const AAltObjectContext *a_alt_object_editor_get_original_context(const AAltObjectEditor *editor) {
-	if (editor!=NULL && editor->origin!=NULL) {
-		AAltObjectPrivate *priv = a_alt_object_get_instance_private((AAltObject *) editor->origin);
-		return priv->context;
+	if (editor!=NULL) {
+		return editor->origin_context_ptr;
 	}
 	return NULL;
 }
@@ -198,7 +205,8 @@ gconstpointer a_alt_object_anchor(gconstpointer object) {
 			a_unref(priv->editor->origin);
 			priv->editor->origin = NULL;
 		}
-		g_slice_free1(a_class->editor_size, priv->editor);
+//		g_slice_free1(a_class->editor_size, priv->editor);
+		g_free(priv->editor);
 		priv->editor = NULL;
 		return object;
 	}
@@ -218,6 +226,7 @@ gconstpointer a_alt_object_anchor(gconstpointer object) {
 		a_unref((gpointer) editor->origin);
 	}
 	editor->origin = a_ref(result);
+	editor->origin_context_ptr = priv->context;
 
 //	printf("a_alt_object_anchor(%d):object=%p, result=%p, editor->origin=%p, context=%p\n", __LINE__, object, result, editor->origin, rpriv->context);
 
@@ -242,7 +251,8 @@ gpointer a_alt_object_mutable(gconstpointer object) {
 	AAltObject *result = g_object_new(type, NULL);
 	AAltObjectPrivate *rpriv = a_alt_object_get_instance_private(result);
 	AAltObjectClass *a_cls = A_ALT_OBJECT_GET_CLASS(object);
-	AAltObjectEditor *editor = g_slice_alloc0(a_cls->editor_size);
+//	AAltObjectEditor *editor = g_slice_alloc0(a_cls->editor_size);
+	AAltObjectEditor *editor = g_malloc0(a_cls->editor_size);
 	rpriv->editor = editor;
 
 	AAltObjectEditor *old_editor = g_atomic_pointer_get(&(priv->editor));
@@ -252,6 +262,7 @@ gpointer a_alt_object_mutable(gconstpointer object) {
 		if ((old_editor_context==priv->context) && !a_cls->clone_context_for_mutable) {
 			/* the source object is mutable but has not changed since it became mutable. We can reference the original context */
 			editor->origin = a_ref(old_editor->origin);
+			editor->origin_context_ptr = old_editor_context;
 			rpriv->context = priv->context;
 			g_atomic_int_inc(&(rpriv->context->ref_count));
 		} else {
@@ -260,6 +271,7 @@ gpointer a_alt_object_mutable(gconstpointer object) {
 	} else {
 		/* the source object is anchored */
 		editor->origin = a_ref((gpointer) object);
+		editor->origin_context_ptr = priv->context;
 		if (a_cls->clone_context_for_mutable) {
 			rpriv->context = l_clone(a_cls, priv->context);
 		} else {

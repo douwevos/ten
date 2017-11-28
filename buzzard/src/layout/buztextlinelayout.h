@@ -66,7 +66,7 @@ const BuzSize buz_text_line_layout_get_size(BuzTextLineLayout *line_layout);
 
 int buz_text_line_layout_view_x_at(BuzTextLineLayout *line_layout, int byte_index);
 
-int buz_text_line_layout_show(BuzTextLineLayout *line_layout, cairo_t *cr);
+int buz_text_line_layout_show(BuzTextLineLayout *line_layout, cairo_t *cr, int view_left, int view_width);
 
 G_END_DECLS
 

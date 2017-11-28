@@ -55,11 +55,15 @@ GType buz_cursor_get_type();
 
 BuzCursor *buz_cursor_new(long long row, int column);
 
-long long buz_cursor_get_row(BuzCursorShady *cursor);
-int buz_cursor_get_column(BuzCursorShady *cursor);
+long long buz_cursor_row(BuzCursorShady *cursor);
+int buz_cursor_x_bytes(BuzCursorShady *cursor);
+int buz_cursor_x_sub(BuzCursorShady *cursor);
 
-BuzCursorAnchored *buz_cursor_anchor(BuzCursorShady *cursor);
-BuzCursor *buz_cursor_mutable(BuzCursorShady *cursor);
+void buz_cursor_set_x(BuzCursor *cursor, int x_bytes, int x_sub);
+
+void buz_cursor_set_row(BuzCursor *cursor, long long row);
+
+A_ALT_HEADERS(BuzCursor, buz_cursor);
 
 G_END_DECLS
 

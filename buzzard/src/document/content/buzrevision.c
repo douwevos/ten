@@ -120,9 +120,14 @@ void buz_revision_set_page_at(BuzRevision *revision, BuzPageShady *page, int pag
 	buz_content_set_page_at(content, page, page_index);
 }
 
-AArrayAnchored *buz_revision_get_cursors(BuzRevisionShady *revision) {
+AArrayShady *buz_revision_get_cursors(BuzRevisionShady *revision) {
 	AContext *context = (AContext *) a_alt_object_private(revision)->context;
 	return context->cursors;
+}
+
+BuzContentShady *buz_revision_get_content(BuzRevisionShady *revision) {
+	AContext *context = (AContext *) a_alt_object_private(revision)->context;
+	return context->content;
 }
 
 
@@ -184,7 +189,10 @@ static void l_a_anchor_content(AAltObject *object) {
 	a_log_debug("pre_anchor:content=%o",context->content);
 	context->content = buz_content_anchor(context->content);
 	a_log_debug("post_anchor:content=%o",context->content);
+	a_log_error("pre_anchor:cursors=%o, %o",context->cursors, a_array_first(context->cursors));
+
 	context->cursors = a_array_anchor(context->cursors);
+	a_log_error("post_anchor:cursors=%o, %o",context->cursors, a_array_first(context->cursors));
 }
 
 static gboolean l_equal(const AObject *object_a, const AObject *object_b) {
@@ -204,7 +212,7 @@ static gboolean l_equal(const AObject *object_a, const AObject *object_b) {
 		return TRUE;
 	}
 
-	a_log_debug("testint content:a=%O, b=%O", context_a->content, context_b->content);
+	a_log_error("testint content:a=%O, b=%O", context_a->content, context_b->content);
 
 	return buz_content_equal(context_a->content, context_b->content)
 			&& a_array_equal(context_a->cursors, context_b->cursors);

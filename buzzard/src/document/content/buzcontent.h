@@ -68,6 +68,8 @@ AIterator *buz_content_page_iterator(BuzContentShady *content);
 
 BuzRowLocation buz_content_page_at_row(BuzContentShady *content, long long row);
 
+BuzPageShady *buz_content_page_at(BuzContentShady *content, int page_index);
+
 void buz_content_set_page_at(BuzContent *content, BuzPageShady *page, int page_index);
 
 void buz_content_insert(BuzContent *content, AStringShady *txt, BuzCursorShady *cursor);

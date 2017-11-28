@@ -66,6 +66,13 @@ void buz_view_construct(BuzView *view, BuzDocument *document);
 BuzView *buz_view_new(BuzDocument *document);
 void buz_view_set_layout_context(BuzView *view, BuzLayoutContext *layout_context);
 
+//void buz_view_move_cursor_right(BuzView *view, gboolean per_word);
+//void buz_view_move_cursor_left(BuzView *view, gboolean per_word);
+
+int buz_view_move_cursor_left_or_right(BuzView *view, gboolean move_right, gboolean per_word);
+void buz_view_move_cursor_up_or_down(BuzView *view, int view_x_cursor, gboolean down);
+
+
 void buz_view_set_top(BuzView *view, long long top);
 
 void buz_view_set_view_size(BuzView *view, int width, int height);
