@@ -1,0 +1,44 @@
+module {
+
+	name 'xantus.test';
+	
+	dependencies {
+		module 'xantus';
+	}
+
+	clear {
+		remove '[%=module.builddir%]';
+	}
+
+	compile {
+		cc {
+			global.cc.args {}
+			src { path './src-ut/'; }  
+			destdir './compiled-ut/'; 
+			depdir './deps-ut/'; 
+		}
+		
+	}
+
+	package {
+		clink {
+			src { 
+				path './compiled-ut/';
+			}
+			output './xantus-ut';
+			global.cc.args {}
+			test {
+				arg '-lm';
+			}
+		}
+	}	
+
+
+	export {
+		headers {
+			dir './src/';
+		}
+	}
+
+
+}
